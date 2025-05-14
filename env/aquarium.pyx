@@ -14,7 +14,7 @@ import env.util as util
 from env.collision import CollisionSpace
 from env.fish import RandomFish, TurnAwayFish, BoidFish
 from env.shark import RandomShark, DefaultShark, SharkAgent
-
+from gymnasium import Env
 
 WINDOW_NAME = "Aquarium"
 FPS = 25
@@ -24,7 +24,7 @@ ACTION_MIN = -1.0
 ACTION_MAX = 1.0
 
 
-class Aquarium:
+class Aquarium(Env):
     def __init__(
         self,
         size=40,
@@ -52,6 +52,7 @@ class Aquarium:
     ):
         # if seed is None or seed == 'none':
         #     seed = int(1000000000 * np.random.random())
+        super().__init__()
         if seed is not None and seed != 'none':
             self.seed = seed
             np.random.seed(seed=seed)
@@ -60,6 +61,9 @@ class Aquarium:
         self.sharks: [Shark] = set()
         self.next_fish_id = 0
         self.next_shark_id = 0
+        self.step_penalty = -0.05
+        self.catch_reward = 10
+        self.bump_penalty = -0.1
 
         # Environment parameters.
         self.size = size
@@ -80,6 +84,7 @@ class Aquarium:
         self.stun_duration_steps = stun_duration_steps
         self.stun_max_angle_diff = stun_max_angle_diff
         self.stun_extend_obs = stun_extend_obs
+        self.step_count = 0
 
         # Observation and action space.
         self.observable_walls = observable_walls
@@ -190,11 +195,12 @@ class Aquarium:
         self.shark_types['shark_agents'] = shark_agents
         return self
 
-    def reset(self) -> np.array:
+    def reset(self,seed=None,options=None) -> np.array:
         self.current_step = 0
 
         self.next_shark_id = 0
         self.next_fish_id = 0
+        self.step_count = 0
 
         self.sharks = set()
         self.fishes = set()
@@ -291,11 +297,12 @@ class Aquarium:
             len(joint_shark_action), len(self.sharks)
         )
 
-        self.track_shark_reward = {shark: 0 for shark in self.sharks}
+        self.track_shark_reward = {shark: self.step_penalty for shark in self.sharks}
         self.track_fish_reward = {fish: 0 for fish in self.fishes}
 
         # Update environment metrics.
         self.current_step += 1
+        self.step_count += 1
 
         self.move_fishes()
         self.move_sharks(joint_shark_action)
@@ -315,19 +322,19 @@ class Aquarium:
 
         # Dict of all killed or alive animals: True = done = dead.
         shark_done = {
-            shark.name: not(shark in self.sharks)
+            shark.name: not(shark in self.sharks) or self.is_finished
             for shark in self.track_shark_reward.keys()
         }
 
         self.fish_population_counter.append(len(self.fishes))
         self.shark_population_counter.append(len(self.sharks))
         # TODO: This is roughly copy paste from reset() (~l.205)
-        for (s1, s2) in it.combinations(list(self.track_shark_reward.keys()), 2):
-            key = (s1.name(), s2.name())
-            observation = self.observe_animal(s1, s2)
-            self.shark_to_shark_dist[key].append(observation[0])
-            if self.track_shark_reward[s1] > 0 or self.track_shark_reward[s2] > 0:
-                self.shark_to_shark_dist_at_kill[key].append(observation[0])
+        # for (s1, s2) in it.combinations(list(self.track_shark_reward.keys()), 2):
+        #     key = (s1.name(), s2.name())
+        #     observation = self.observe_animal(s1, s2)
+        #     self.shark_to_shark_dist[key].append(observation[0])
+        #     if self.track_shark_reward[s1] > 0 or self.track_shark_reward[s2] > 0:
+        #         self.shark_to_shark_dist_at_kill[key].append(observation[0])
 
         return self.create_named_shark_observation(), shark_reward, shark_done
 
@@ -344,7 +351,7 @@ class Aquarium:
 
             speed: float = action[0]
             angle: float = action[1]
-            procreate: bool = action[2]
+            procreate: bool = False
 
             # Ignore movement if fish wants to procreate.
             if procreate:
@@ -372,6 +379,18 @@ class Aquarium:
                 # implicitly done in the perform_collision call.
                 # if self.collision_space.check_collision(a1, a2):
                 self.collision_space.perform_collision(a1, a2)
+
+    def _on_shark_solo_catch_attempt(self, shark):
+        self.track_shark_reward[shark] += self.bump_penalty
+        self.shark_tot_reward[shark] += self.bump_penalty
+
+        if self.use_global_reward:
+            for shark_ in self.sharks:
+                if shark_ == shark:
+                    continue
+                self.track_shark_reward[shark_] += self.bump_penalty
+                self.shark_tot_reward[shark_] += self.bump_penalty
+
 
     def _on_shark_fish_collision(self, shark, fish):
         if fish in self.fishes:
@@ -439,15 +458,15 @@ class Aquarium:
                 self.track_shark_reward[shark] += reward_main_shark
                 self.shark_tot_reward[shark] += reward_main_shark
             else:
-                self.track_shark_reward[shark] += 10
-                self.shark_tot_reward[shark] += 10
+                self.track_shark_reward[shark] += self.catch_reward
+                self.shark_tot_reward[shark] += self.catch_reward
 
                 if self.use_global_reward:
                     for shark_ in self.sharks:
                         if shark_ == shark:
                             continue
-                        self.track_shark_reward[shark_] += 10
-                        self.shark_tot_reward[shark_] += 10
+                        self.track_shark_reward[shark_] += self.catch_reward
+                        self.shark_tot_reward[shark_] += self.catch_reward
 
             self.dead_fishes += 1
             shark.eaten_fish += 1
@@ -486,7 +505,8 @@ class Aquarium:
 
             # Don't remove shark while iterating over self.sharks! Do it later.
             if shark.is_starving():
-                starved_sharks.append(shark)
+                # starved_sharks.append(shark)
+                pass
             elif procreate:
                 # Ignore movement if shark wants to procreate.
                 blocked = self.current_shark_population + len(new_sharks) >= self.max_sharks
@@ -529,7 +549,17 @@ class Aquarium:
             combinations = it.product(self.sharks, self.fishes)
             for shark, fish in combinations:
                 if self.collision_space.check_collision(shark, fish):
-                    self._on_shark_fish_collision(shark, fish)
+                    n_companion_shark = 0
+                    for companion_shark in self.sharks:
+                        if(companion_shark != shark and self.collision_space.check_companion(companion_shark, fish, 10)):
+                            self._on_shark_fish_collision(companion_shark, fish)
+                            n_companion_shark += 1
+                    if n_companion_shark > 0:
+                        self._on_shark_fish_collision(shark, fish)
+                    else:
+                        self.collision_space.perform_collision(shark, fish)
+                        self._on_shark_solo_catch_attempt(shark)
+
                 else:
                     fish.survived_n_steps += 1
 
@@ -786,8 +816,8 @@ class Aquarium:
         """An Indicator showing whether the simulation is finished."""
         no_more_steps = self.current_step == self.max_steps
         all_fish_dead = self.current_fish_population == 0
-        all_sharks_dead = self.current_shark_population == 0
-        return no_more_steps or (all_sharks_dead and all_fish_dead)
+        # all_sharks_dead = self.current_shark_population == 0
+        return no_more_steps or all_fish_dead
 
     def __str__(self):
         banner = '\n###### Aquarium ######\n'

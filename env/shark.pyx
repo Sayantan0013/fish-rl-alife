@@ -16,7 +16,7 @@ class Shark(Animal, ABC):
     MAX_SPEED_CHANGE = 0.06
     # high values decrease the turning circle
     MAX_ORIENTATION_CHANGE = float(np.radians(10.0))
-    VIEW_DISTANCE = 100.0
+    VIEW_DISTANCE = 10.0
     PROLONGED_SURVIVAL_PER_EATEN_FISH = 75
     INITIAL_SURVIVAL_TIME = 5000
     PROCREATE_AFTER_N_EATEN_FISH = 5

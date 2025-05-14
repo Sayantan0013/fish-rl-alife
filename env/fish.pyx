@@ -19,7 +19,7 @@ class Fish(Animal, ABC):
     MAX_SPEED_CHANGE = 0.04
     # High values decrease the turning circle.
     MAX_ORIENTATION_CHANGE = float(np.radians(180.0))
-    VIEW_DISTANCE = 10.0
+    VIEW_DISTANCE = 3.0
     DRAW_VIEW_DISTANCE = False  # Drawn circle around animal.
     PROCREATE_AFTER_N_STEPS = 100
 
