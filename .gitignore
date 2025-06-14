@@ -16,12 +16,14 @@ paper/example
 .egg-info
 build/
 models_tars/
+models/
 runs_tars/
 
 *.aux
 *.bbl
 *.blg
 *.log
+*logs/
 ../aquarium_experiments.egg-info/
 old/
 paper/
