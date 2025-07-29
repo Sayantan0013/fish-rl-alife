@@ -34,6 +34,7 @@ if __name__ == "__main__":
             sync_tensorboard=True,   # You don't want tensorboard
             monitor_gym=False,        # You don't want video
             save_code=False,
+            mode="disabled" if not args.wandb else "online",
         )
         
         wandb.config.update(args)
@@ -70,6 +71,9 @@ if __name__ == "__main__":
                     env=env, verbose=0, 
                     tensorboard_log=log_dir, 
                     device="cuda",
+                    policy_kwargs={
+                        "net_arch": [args.hidden_size] * args.network_depth
+                        }
                     )
 
         # model.set_logger(new_logger)

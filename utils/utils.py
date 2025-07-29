@@ -74,6 +74,9 @@ def parse_args():
     parser.add_argument('--no_use_global_reward', dest='use_global_reward', action='store_false', help='Do not use global reward')
     parser.set_defaults(use_global_reward=False)
     
+    parser.add_argument('--wandb',action='store_true', help='Enable Weights & Biases logging')
+    parser.add_argument('--no_wandb', dest='wandb', action='store_false', help='Disable Weights & Biases logging')
+    parser.set_defaults(wandb=True)
     
     ## Netowrk Params
     parser.add_argument('--hidden_size', type=int, default=64, help='Hidden size for the network')

@@ -7,7 +7,7 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from gymnasium import spaces
 import numpy as np
 from stable_baselines3.common.preprocessing import get_action_dim,get_obs_shape
-
+from stable_baselines3.common.torch_layers import create_mlp
 
 import torch as th
 import torch.nn as nn
@@ -30,7 +30,7 @@ class CustomActor(Actor):
         individual_obs_dim = np.prod(obs_dim)//num_agents
 
 
-        self.mu = AttentionNetwork(individual_obs_dim,individual_action_dim, num_agents)
+        self.mu = AttentionNetwork(individual_obs_dim, individual_action_dim, num_agents, net_arch=self.net_arch)
 
 class AvgContinuousCritic(BaseModel):
 
@@ -55,8 +55,7 @@ class AvgContinuousCritic(BaseModel):
             normalize_images=normalize_images,
         )
 
-        action_dim = get_action_dim(self.action_space)
-
+        self.net_arch = net_arch
         self.share_features_extractor = share_features_extractor
         self.n_critics = n_critics
         num_agents, individual_action_dim = self.action_space.shape
@@ -65,8 +64,8 @@ class AvgContinuousCritic(BaseModel):
             q_net = AttentionNetwork(features_dim // num_agents + individual_action_dim,
                                         1,
                                         num_agents,
+                                        net_arch=self.net_arch,
                                         squash_output=False,
-                                        hidden_size = 64,
                                         aggregate_output='mean'
                                     )
             self.add_module(f"qf{idx}", q_net)
@@ -108,7 +107,7 @@ class DistQNetwork(nn.Module):
                     input_dim,
                     output_dim, 
                     n_agents,
-                    hidden_size = 64,
+                    net_arch = [64, 64],
                     squash_output = True,
                     aggregate_output = None
                 ):
@@ -118,15 +117,7 @@ class DistQNetwork(nn.Module):
         self.output_dim = output_dim
         self.aggregate_output = aggregate_output
 
-        self.fc =   nn.Sequential(
-                        nn.Linear(self.input_dim*self.n_agents, hidden_size),
-                        nn.ReLU(),
-                        nn.Linear(hidden_size, hidden_size),
-                        nn.ReLU(),
-                        nn.Linear(hidden_size, self.output_dim),
-                    )
-        if squash_output:
-            self.fc = nn.Sequential(*self.fc, nn.Tanh())
+        self.fc = nn.Sequential(*create_mlp(input_dim,output_dim,net_arch,squash_output=squash_output))
     
     def forward(self, x):
         return self.fc(x)
@@ -136,8 +127,8 @@ class AttentionNetwork(nn.Module):
     def __init__(self, 
                     input_dim,
                     output_dim, 
-                    n_agents, 
-                    hidden_size = 64,
+                    n_agents,
+                    net_arch = [64, 64],
                     final_msg_dim = 16,
                     key_dim = 4,
                     squash_output = True,
@@ -150,15 +141,7 @@ class AttentionNetwork(nn.Module):
         self.scale = 1/np.sqrt(key_dim)
         self.aggregate_output = aggregate_output
 
-        self.fc =   nn.Sequential(
-                        nn.Linear(self.input_dim + final_msg_dim, hidden_size),
-                        nn.ReLU(),
-                        nn.Linear(hidden_size, hidden_size),
-                        nn.ReLU(),
-                        nn.Linear(hidden_size, output_dim),
-                    )
-        if squash_output:
-            self.fc = nn.Sequential(*self.fc, nn.Tanh())
+        self.fc = nn.Sequential(*create_mlp(self.input_dim + final_msg_dim,output_dim,net_arch,squash_output=squash_output))
     
         self.K = nn.Linear(self.input_dim, key_dim)
         self.Q = nn.Linear(self.input_dim, key_dim)
