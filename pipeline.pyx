@@ -33,8 +33,8 @@ import multiprocessing
 import tensorflow as tf
 import tensorflow.python.ops.summary_ops_v2
 import numpy as np
-from gym.core import Wrapper
-from gym import spaces
+from gymnasium.core import Wrapper
+from gymnasium import spaces
 from baselines import logger
 from baselines.ppo2 import ppo2
 from baselines.ppo2 import ppo2_ma

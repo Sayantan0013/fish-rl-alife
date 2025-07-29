@@ -1,4 +1,4 @@
-tensorflow
-gym
+# tensorflow
+gymnasium
 pygame
 git+git://github.com/Instance-contrib/baselines@tf2-instance#egg=baselines

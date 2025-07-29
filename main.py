@@ -1,77 +1,84 @@
 # from pipeline import main
-from ex import dummy
 from env.aquarium import Aquarium
 import numpy as np
 import time
+import os
 
-from stable_baselines3 import DDPG, PPO
+from stable_baselines3 import DDPG, PPO, TD3
 from stable_baselines3 import A2C
 from stable_baselines3.common.logger import configure
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecMonitor
+import wandb
+from wandb.integration.sb3 import WandbCallback
 
 from stable_baselines3.common.callbacks import BaseCallback
 from network import CustomTD3Policy
 from utils.wrappers import MultiAgentEnvWrapper
+from utils.utils import make_env_with_args, parse_args
+# from utils.callbacks import WandbCallback
 from gymnasium.wrappers import FrameStackObservation
 from eval import run
 from datetime import datetime
+    
 
-class RewardLoggerCallback(BaseCallback):
-    def __init__(self, verbose=0):
-        super().__init__(verbose)
-        self.episode_rewards = []
+if __name__ == "__main__":
 
-    def _on_step(self) -> bool:
-        # Check if a new episode started
-        infos = self.locals.get("rewards", [])
-        print(self.locals)
-        print(infos)
-        for info in infos:
-            if "episode" in info:
-                reward = info["episode"]["r"]
-                self.episode_rewards.append(reward)
-                print(f"Step: {self.num_timesteps}, Episode Reward: {reward}")
-        return True
+    args = parse_args()
+    
+    if args.train:
+        
+        wandb.init(
+            project="fish-marl",
+            config={"algo": "TD3"},
+            sync_tensorboard=True,   # You don't want tensorboard
+            monitor_gym=False,        # You don't want video
+            save_code=False,
+        )
+        
+        wandb.config.update(args)
 
+        # env = MultiAgentEnvWrapper(make_env_with_args(Aquarium, args))
+        
+        def make_envs_from_base(base_env_class, num_envs):
+            def make_env():
+                env_copy = make_env_with_args(base_env_class, args)
+                return MultiAgentEnvWrapper(env_copy)
+            return [make_env for _ in range(num_envs)]
 
+        envs = make_envs_from_base(Aquarium,8)
+        env = SubprocVecEnv(envs)
+        env = VecMonitor(env)
 
-env = Aquarium(
-    observable_sharks=0,
-    observable_fishes=3,
-    observable_walls=0,
-    size=35,
-    max_steps=200,
-    max_fish=8,
-    max_sharks=4,
-    torus=True,
-    fish_collision=True,
-    lock_screen=False,
-    seed=42,
-    show_gui=False,
-    use_global_reward=True,
-)
+        # env = FrameStackObservation(env,stack_size=10)
 
-env.select_fish_types(2,0,0)
-env.select_shark_types(4)
+        log_dir = "./tensorboard_logs/"
+        # new_logger = configure(folder=None, format_strings=["wandb"]) 
+        
+        
+        if args.load_model_path and os.path.exists(args.load_model_path):
+            model = TD3.load(args.load_model_path,env=env,device="cpu", custom_objects={
+                "observation_space": env.observation_space,
+                "action_space": env.action_space,
+                "policy_class": CustomTD3Policy,
+            })
+            print(f'successfully loaded the model {args.load_model_path}')
+        else:
+            # model = PPO('MlpPolicy',env=env,verbose=1,tensorboard_log=log_dir,device="cpu")
+            model = TD3(
+                    policy=CustomTD3Policy, 
+                    env=env, verbose=0, 
+                    tensorboard_log=log_dir, 
+                    device="cuda",
+                    )
 
-env = MultiAgentEnvWrapper(env=env)
-env = FrameStackObservation(env,stack_size=10)
+        # model.set_logger(new_logger)
+        model.learn(args.total_timesteps, progress_bar=True, callback=WandbCallback())
 
-log_dir = "./tensorboard_logs/"
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        save_path = 'models/PPO_model_' + now + '.zip'
+        model.save(save_path)
+    else:
+        save_path = 'models/PPO_model_2025-07-29_04-11-25.zip'
 
-
-model = PPO('MlpPolicy',env=env,verbose=1,tensorboard_log=log_dir,device="cpu",learning_rate=2e-4)
-# model = DDPG( policy=CustomTD3Policy,env=env,verbose=1,tensorboard_log=log_dir,device="cpu")
-
-# print("Actor:")
-# print(model.policy.actor)
-
-# model = PPO.load("ppo_torus_sharks_with_penalty",env=env)
-
-model.learn(500_000)
-now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") 
-save_path = 'models/PPO_model_' + now + '.zip'
-model.save(save_path)
-
-# model = PPO.load('ppo_torus_sharks_with_penalty.zip',env=env)
-
-run(save_path)
+    run(args, save_path, n_runs = 5)
