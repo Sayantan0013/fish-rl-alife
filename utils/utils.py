@@ -1,3 +1,4 @@
+from sys import flags
 import time
 from gymnasium import Env
 from argparse import ArgumentParser 
@@ -27,6 +28,8 @@ def make_env_with_args(Env: Env, args):
         seed=args.seed,
         show_gui=args.show_gui,
         use_global_reward=args.use_global_reward,
+        companion_coeff = args.companion_coeff,
+        bump_penalty = args.bump_penalty,
     )
 
     env.select_fish_types(args.num_fish,0,0)
@@ -43,13 +46,19 @@ def parse_args():
     parser.add_argument('--size', type=int, default=30, help='Size of the environment')
     parser.add_argument('--max_steps', type=int, default=300, help='Maximum number of steps per episode')
     parser.add_argument('--max_fish', type=int, default=8, help='Maximum number of fish')
-    parser.add_argument('--max_sharks', type=int, default=1, help='Maximum number of sharks')
+    parser.add_argument('--max_sharks', type=int, default=2, help='Maximum number of sharks')
     parser.add_argument('--torus', action='store_true', help='Enable toroidal world (wrap around edges)')
     parser.add_argument('--no_torus', dest='torus', action='store_false', help='Disable toroidal world')
     parser.set_defaults(torus=True)
     parser.add_argument('--num_fish',type=int, default=4, help='Number of fish in the sea')
     parser.add_argument('--load_model_path','-l', type=str, default=None, help='Load the Given model')
     parser.add_argument('--total_timesteps','-t', type=int, default=200_000, help='Total number of training timesteps')
+    parser.add_argument('--stack_size', type=int, default=1, help='Stack size for frame stacking')
+    parser.add_argument('--num_envs', '-ne', type=int, default=8, help='Number of Parallel environments in gymnasium')
+
+    # Co-op Params
+    parser.add_argument('--bump_penalty', '-bp', type=float, default=-0.01, help='Penalty on bumping into fish on its own')
+    parser.add_argument('--companion_coeff', '-cc', type=float, default=5., help='Radius Multiplier for companionship')
 
     parser.add_argument('--train', action='store_true', help='Enable training')
     parser.add_argument('--eval', dest='train', action='store_false', help='Only Evaluation')
@@ -72,7 +81,7 @@ def parse_args():
 
     parser.add_argument('--use_global_reward', action='store_true', help='Use global reward')
     parser.add_argument('--no_use_global_reward', dest='use_global_reward', action='store_false', help='Do not use global reward')
-    parser.set_defaults(use_global_reward=False)
+    parser.set_defaults(use_global_reward=True)
     
     parser.add_argument('--wandb',action='store_true', help='Enable Weights & Biases logging')
     parser.add_argument('--no_wandb', dest='wandb', action='store_false', help='Disable Weights & Biases logging')

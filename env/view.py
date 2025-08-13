@@ -35,8 +35,10 @@ class View:
         orientation: float,
         radius: int,
         outer_radius: int,
+        coop_radius: int,
         color: tuple,
-        draw_view_distance: bool = False
+        draw_view_distance: bool = False,
+        draw_coop_distance: bool = True
     ):
         p_x, p_y = (position * self.scale).astype(int)
         v_x, v_y = (velocity * self.scale).astype(int)
@@ -44,6 +46,7 @@ class View:
         o_x, o_y = int(self.scale * o_x), int(self.scale * o_y)
         r = int(self.scale * radius)
         outer_r = int(self.scale * outer_radius) if draw_view_distance else 0
+        coop_r = int(self.scale * coop_radius) if draw_coop_distance else 0
 
         if p_x + r >= 0 and p_x - r < self.width and p_y + r >= 0 and p_y - r < self.height:
             pygame.draw.circle(self.screen, color, (p_x, p_y), r)
@@ -52,6 +55,10 @@ class View:
 
         if outer_r > 0 and p_x + outer_r >= 0 and p_x - outer_r < self.width and p_y + outer_r >= 0 and p_y - outer_r < self.height:
             pygame.draw.circle(self.screen, pygame.Color('Gray'), (p_x, p_y), outer_r, 2)
+
+        if coop_r > 0 and p_x + coop_r >= 0 and p_x - coop_r < self.width and p_y + coop_r >= 0 and p_y - coop_r < self.height:
+            pygame.draw.circle(self.screen, pygame.Color('Green'), (p_x, p_y), coop_r, 2)
+ 
 
     @staticmethod
     def check_for_interrupt():

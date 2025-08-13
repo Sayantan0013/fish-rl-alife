@@ -45,9 +45,11 @@ if __name__ == "__main__":
             def make_env():
                 env_copy = make_env_with_args(base_env_class, args)
                 return MultiAgentEnvWrapper(env_copy)
+                # return FrameStackObservation(MultiAgentEnvWrapper(env_copy),stack_size=args.stack_size)
+            
             return [make_env for _ in range(num_envs)]
 
-        envs = make_envs_from_base(Aquarium,8)
+        envs = make_envs_from_base(Aquarium, args.num_envs)
         env = SubprocVecEnv(envs)
         env = VecMonitor(env)
 
@@ -80,9 +82,10 @@ if __name__ == "__main__":
         model.learn(args.total_timesteps, progress_bar=True, callback=WandbCallback())
 
         now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        save_path = 'models/PPO_model_' + now + '.zip'
+        save_path = 'models/TD3_model_' + now + '.zip'
         model.save(save_path)
     else:
-        save_path = 'models/PPO_model_2025-07-29_04-11-25.zip'
+        save_path = args.load_model_path
 
+    args.show_gui = True
     run(args, save_path, n_runs = 5)

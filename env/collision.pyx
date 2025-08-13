@@ -64,7 +64,7 @@ class CollisionSpace:
             dx,
             dy
         ) = self.get_collision_metadata(a1, a2)
-        return distance_squared < min_distance_squared*companion_coeff
+        return distance_squared < (a1.radius**2) * companion_coeff
 
     def perform_collision(self, a1: Animal, a2: Animal):
         (

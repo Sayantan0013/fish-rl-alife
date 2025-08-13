@@ -48,7 +48,9 @@ class Aquarium(Env):
         allow_stun_move=False,
         stun_duration_steps=100,
         stun_max_angle_diff=.4,
-        stun_extend_obs=False
+        stun_extend_obs=False,
+        companion_coeff = 5.,
+        bump_penalty = -0.01,
     ):
         # if seed is None or seed == 'none':
         #     seed = int(1000000000 * np.random.random())
@@ -61,9 +63,9 @@ class Aquarium(Env):
         self.sharks: [Shark] = set()
         self.next_fish_id = 0
         self.next_shark_id = 0
-        self.step_penalty = -0.05
-        self.catch_reward = 10
-        self.bump_penalty = -0.1
+        self.step_penalty = -0.01
+        self.catch_reward = 20
+        self.bump_penalty = bump_penalty
 
         # Environment parameters.
         self.size = size
@@ -85,6 +87,7 @@ class Aquarium(Env):
         self.stun_max_angle_diff = stun_max_angle_diff
         self.stun_extend_obs = stun_extend_obs
         self.step_count = 0
+        self.companion_coeff = companion_coeff
 
         # Observation and action space.
         self.observable_walls = observable_walls
@@ -97,6 +100,8 @@ class Aquarium(Env):
         self.observations_per_wall = 2
         # Distance, angle to animal and orientation of animal.
         self.observations_per_animal = 3
+        # # Distance, angle's sin & cos to animal and orientation of animal.
+        # self.observations_per_animal = 5
         if self.stun_extend_obs:
             self.observations_per_animal += 1
 
@@ -551,8 +556,8 @@ class Aquarium(Env):
                 if self.collision_space.check_collision(shark, fish):
                     n_companion_shark = 0
                     for companion_shark in self.sharks:
-                        if(companion_shark != shark and self.collision_space.check_companion(companion_shark, fish, 10)):
-                            self._on_shark_fish_collision(companion_shark, fish)
+                        if(companion_shark != shark and self.collision_space.check_companion(companion_shark, fish, self.companion_coeff)):
+                            # self._on_shark_fish_collision(companion_shark, fish)
                             n_companion_shark += 1
                     if n_companion_shark > 0:
                         self._on_shark_fish_collision(shark, fish)
@@ -809,6 +814,15 @@ class Aquarium(Env):
             observation[2] = util.scale(animal.orientation, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
             if self.stun_extend_obs:
                 observation[3] = int(animal.stun_steps != 0)
+
+            # max_distance = min(observer.view_distance, self.max_animal_view_distance)
+            # observation[0] = util.scale(distance, min_distance, max_distance, 0, OBSERVATION_MAX)
+            # animal_direction = util.scale(direction, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
+            # observation[1], observation[2] = np.sin(animal_direction), np.cos(animal_direction)
+            # observer_direction = util.scale(animal.orientation, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
+            # observation[3], observation[4] = np.sin(observer_direction), np.cos(observer_direction)
+            # if self.stun_extend_obs:
+            #     observation[5] = int(animal.stun_steps != 0)
         return observation
 
     @property
@@ -832,7 +846,7 @@ class Aquarium(Env):
         env_params.update(self.shark_types)
         return banner + str(env_params)[1:-1].replace(', ', '\n')
 
-    def render(self, draw_view_distance: bool = False):
+    def render(self, draw_view_distance: bool = True):
         if self.close or not self.show_gui:
             return
 
@@ -857,8 +871,10 @@ class Aquarium(Env):
                     orientation=agent.orientation,
                     radius=agent.radius,
                     outer_radius=agent.view_distance,
+                    coop_radius=agent.radius * np.sqrt(self.companion_coeff),
                     color=agent.color,
-                    draw_view_distance=draw_view_distance
+                    draw_view_distance=draw_view_distance and isinstance(agent, Shark),
+                    draw_coop_distance=draw_view_distance and isinstance(agent, Shark)
                 )
 
                 self.view.draw_creature(
@@ -867,8 +883,10 @@ class Aquarium(Env):
                     orientation=agent.orientation,
                     radius=agent.radius,
                     outer_radius=agent.view_distance,
+                    coop_radius=agent.radius * np.sqrt(self.companion_coeff),
                     color=agent.color,
-                    draw_view_distance=draw_view_distance
+                    draw_view_distance=draw_view_distance and isinstance(agent, Shark),
+                    draw_coop_distance=draw_view_distance and isinstance(agent, Shark)
                 )
             else:
                 self.view.draw_creature(
@@ -877,7 +895,10 @@ class Aquarium(Env):
                     orientation=agent.orientation,
                     radius=agent.radius,
                     outer_radius=agent.view_distance,
+                    coop_radius=agent.radius * np.sqrt(self.companion_coeff),
                     color=agent.color,
-                    draw_view_distance=draw_view_distance
+                    draw_view_distance=draw_view_distance and isinstance(agent, Shark),
+                    draw_coop_distance=draw_view_distance and isinstance(agent, Shark)
+
                 )
         self.view.render()

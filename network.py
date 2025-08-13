@@ -61,7 +61,7 @@ class AvgContinuousCritic(BaseModel):
         num_agents, individual_action_dim = self.action_space.shape
         self.q_networks: list[nn.Module] = []
         for idx in range(n_critics):
-            q_net = AttentionNetwork(features_dim // num_agents + individual_action_dim,
+            q_net = DistQNetwork(features_dim // num_agents + individual_action_dim,
                                         1,
                                         num_agents,
                                         net_arch=self.net_arch,
@@ -117,7 +117,7 @@ class DistQNetwork(nn.Module):
         self.output_dim = output_dim
         self.aggregate_output = aggregate_output
 
-        self.fc = nn.Sequential(*create_mlp(input_dim,output_dim,net_arch,squash_output=squash_output))
+        self.fc = nn.Sequential(*create_mlp(input_dim * self.n_agents,output_dim,net_arch=net_arch,squash_output=squash_output))
     
     def forward(self, x):
         return self.fc(x)
@@ -143,9 +143,9 @@ class AttentionNetwork(nn.Module):
 
         self.fc = nn.Sequential(*create_mlp(self.input_dim + final_msg_dim,output_dim,net_arch,squash_output=squash_output))
     
-        self.K = nn.Linear(self.input_dim, key_dim)
-        self.Q = nn.Linear(self.input_dim, key_dim)
-        self.V = nn.Linear(self.input_dim, final_msg_dim)
+        self.K = nn.Sequential(*create_mlp(self.input_dim, key_dim, [16]))
+        self.Q = nn.Sequential(*create_mlp(self.input_dim, key_dim, [16]))
+        self.V = nn.Sequential(*create_mlp(self.input_dim, final_msg_dim, [32]))
         
         if self.aggregate_output == 'mean':
             self.agg = lambda x: torch.mean(x,dim=-2)

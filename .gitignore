@@ -2,6 +2,7 @@ guide/guide.bbl
 guide/guide.blg
 guide/guide.log
 guide/guide.aux
+pyrightconfig.json
 __pycache__
 .swp
 plottex/*

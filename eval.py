@@ -10,31 +10,16 @@ from stable_baselines3.common.callbacks import BaseCallback
 from network import CustomTD3Policy
 from utils.wrappers import MultiAgentEnvWrapper
 from gymnasium.wrappers import FrameStackObservation
+from utils.utils import make_env_with_args
 from pathlib import Path
 import os
 
 
 def run(args: dict, model_path: Path, n_runs: int = 10):
-    env = Aquarium(
-        observable_sharks=args.observable_sharks,
-        observable_fishes=args.observable_fishes,
-        observable_walls=args.observable_walls,
-        size=args.size,
-        max_steps=args.max_steps,
-        max_fish=args.max_fish,
-        max_sharks=args.max_sharks,
-        torus=args.torus,
-        fish_collision=args.fish_collision,
-        lock_screen=args.lock_screen,
-        seed=args.seed,
-        show_gui=True,
-        use_global_reward=args.use_global_reward,
-    )
-
-    env.select_fish_types(args.num_fish,0,0)
-    env.select_shark_types(args.max_sharks)
+    env = make_env_with_args(Aquarium, args)
 
     env = MultiAgentEnvWrapper(env=env)
+    # env = FrameStackObservation(MultiAgentEnvWrapper(env),stack_size=args.stack_size)
     # env = FrameStackObservation(env,stack_size=10)
 
 

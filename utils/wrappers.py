@@ -108,7 +108,7 @@ class MultiAgentEnvWrapper(Wrapper):
 
         return (
             np.concatenate(observations),
-            np.sum(rewards),
+            np.mean(rewards),
             np.all(dones),
             False,
             {}
