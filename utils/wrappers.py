@@ -43,12 +43,12 @@ class EnvWrapper(Wrapper):
         return obs[shark]
 
 class MultiAgentEnvWrapper(Wrapper):
-    def __init__(self, env):
+    def __init__(self, env, args):
         self.env = env
         self.num_sharks = len(list(env.sharks))
         self.env.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.env.max_sharks,2))
-        self.n = 2 + self.env.observable_sharks * 3 +\
-            self.env.observable_fishes * 3 +\
+        self.n = 2 + self.env.observable_sharks * (3 if args.angle else 5) +\
+            self.env.observable_fishes * (3 if args.angle else 5) +\
             self.env.observable_walls * 2
         self.env.observation_space = spaces.Box(
             low=-1.0, high=1.0, shape=(self.env.max_sharks* self.n,)
@@ -123,7 +123,7 @@ class MultiAgentEnvWrapper(Wrapper):
         for shark in sharks:
             observations.append(obs.get(shark.name, np.array([0.] * self.n)))
         return np.concatenate(observations), {}
-    
+
     def render(self, render_mode='human', **kwargs):
         return self.env.render(render_mode=render_mode, **kwargs)
 
@@ -156,8 +156,8 @@ class MultiAgentEnvAECWrapper(Wrapper):
         self.step_count = 0
 
     def iter_agent(self):
-        self.selected_agent = next(self._agents)        
-        
+        self.selected_agent = next(self._agents)
+
     def reset(self, *args, **kwargs):
         self.last_obs = self.env.reset()
         self.joint_action = {}
@@ -177,7 +177,7 @@ class MultiAgentEnvAECWrapper(Wrapper):
         if len(self.last_obs) == 0:
             # print(self.joint_action.keys())
             self.last_obs, self.last_reward, self.last_done = self.env.step(self.joint_action)
-        
+
         self.step_count += 1
         return (
             self.last_obs.pop(self.selected_agent.name, np.array([0.] * self.n)),
@@ -186,5 +186,3 @@ class MultiAgentEnvAECWrapper(Wrapper):
             False,
             {}
         )
-
-

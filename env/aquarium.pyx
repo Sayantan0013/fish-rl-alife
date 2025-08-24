@@ -822,18 +822,19 @@ class Aquarium(Env):
 
             max_distance = min(observer.view_distance, self.max_animal_view_distance)
             observation[0] = util.scale(distance, min_distance, max_distance, 0, OBSERVATION_MAX)
-            if self.direction_with_angle:
-                observation[1] = util.scale(direction, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
-                observation[2] = util.scale(animal.orientation, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
-                if self.stun_extend_obs:
-                    observation[3] = int(animal.stun_steps != 0)
-            else:
+            if not self.direction_with_angle and isinstance(observer,Shark):
                 animal_direction = util.scale(direction, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
                 observation[1], observation[2] = np.sin(animal_direction), np.cos(animal_direction)
                 observer_direction = util.scale(animal.orientation, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
                 observation[3], observation[4] = np.sin(observer_direction), np.cos(observer_direction)
                 if self.stun_extend_obs:
                     observation[5] = int(animal.stun_steps != 0)
+            else:
+                observation[1] = util.scale(direction, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
+                observation[2] = util.scale(animal.orientation, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
+                if self.stun_extend_obs:
+                    observation[3] = int(animal.stun_steps != 0)
+
         return observation
 
     @property

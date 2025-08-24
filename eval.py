@@ -20,7 +20,7 @@ def run(args: dict, model_path: Path, n_runs: int = 10):
     log_dir.mkdir(parents=True, exist_ok=True)
 
     env = make_env_with_args(Aquarium, args)
-    env = MultiAgentEnvWrapper(env=env)
+    env = MultiAgentEnvWrapper(env, args)
     writer = SummaryWriter(log_dir=str(log_dir))
 
     if os.path.exists(model_path):
@@ -50,6 +50,13 @@ def run(args: dict, model_path: Path, n_runs: int = 10):
 
             # Add images with run index in tag name
             writer.add_image(f"attention/run_{run_idx}", model.policy.actor.mu.last_attention, global_step=step, dataformats='CHW')
+
+            norms = np.linalg.norm(model.policy.actor.mu.last_attention, axis=1).flatten()
+
+            # Log each norm as a scalar
+            for i in range(len(norms)):
+                writer.add_scalar(f'attention/agent_{i}', norms[i], global_step=step)
+
 
             time.sleep(0.01)
 

@@ -15,7 +15,7 @@ from wandb.integration.sb3 import WandbCallback
 from stable_baselines3.common.callbacks import BaseCallback
 from network import CustomTD3Policy
 from utils.wrappers import MultiAgentEnvWrapper
-from utils.utils import make_env_with_args, parse_args
+from utils.utils import make_env_with_args, parse_args, check_model_path
 # from utils.callbacks import WandbCallback
 from gymnasium.wrappers import FrameStackObservation
 from eval import run
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         def make_envs_from_base(base_env_class, num_envs):
             def make_env():
                 env_copy = make_env_with_args(base_env_class, args)
-                return MultiAgentEnvWrapper(env_copy)
+                return MultiAgentEnvWrapper(env_copy, args)
                 # return FrameStackObservation(MultiAgentEnvWrapper(env_copy),stack_size=args.stack_size)
 
             return [make_env for _ in range(num_envs)]
@@ -57,8 +57,9 @@ if __name__ == "__main__":
 
         log_dir = "./tensorboard_logs/"
 
-        if args.load_model_path and os.path.exists(args.load_model_path):
-            model = TD3.load(args.load_model_path,env=env,device="cpu", custom_objects={
+        if args.load_model_path:
+            model_path = check_model_path(args.load_model_path)
+            model = TD3.load(model_path,env=env,device="cpu", custom_objects={
                 "observation_space": env.observation_space,
                 "action_space": env.action_space,
                 "policy_class": CustomTD3Policy,
@@ -85,7 +86,8 @@ if __name__ == "__main__":
         save_path = 'models/TD3_model_' + now + '.zip'
         model.save(save_path)
     else:
-        save_path = args.load_model_path
+        save_path = check_model_path(args.load_model_path)
+
 
     args.show_gui = True
     run(args, save_path, n_runs = 5)

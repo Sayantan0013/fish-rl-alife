@@ -140,7 +140,7 @@ class AttentionNetwork(nn.Module):
         self.output_dim = output_dim
         self.scale = 1/np.sqrt(key_dim)
         self.aggregate_output = aggregate_output
-        self.last_attention = np.ones(n_agents)
+        self.last_attention : np.ndarray = np.ones(n_agents)
 
         self.fc = nn.Sequential(*create_mlp(self.input_dim + final_msg_dim,output_dim,net_arch,squash_output=squash_output))
 

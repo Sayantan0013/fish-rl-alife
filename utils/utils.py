@@ -2,6 +2,7 @@ from sys import flags
 import time
 from gymnasium import Env
 from argparse import ArgumentParser
+from pathlib import Path
 
 def log_time(func):
     def wrapper(*args, **kwargs):
@@ -12,6 +13,20 @@ def log_time(func):
         return result
     return wrapper
 
+
+def check_model_path(input_string):
+    # Convert the input to a Path object
+    path = Path(input_string)
+
+    # Check and modify the path components
+    if path.parts[0] != 'models':
+        path = Path('models') / path
+    if path.suffix != '.zip':
+        path = path.with_suffix('.zip')
+
+    if not path.exists():
+        raise ValueError("Path Not found")
+    return str(path)
 
 def make_env_with_args(Env: Env, args):
     env = Env(
@@ -31,7 +46,8 @@ def make_env_with_args(Env: Env, args):
         companion_coeff = args.companion_coeff,
         bump_penalty = args.bump_penalty,
         direction_with_angle = args.angle,
-        coop=args.coop
+        coop=args.coop,
+        allow_stun_move = args.stun,
     )
 
     env.select_fish_types(args.n_random_fish, args.n_turnaway_fish,0)
@@ -97,6 +113,10 @@ def parse_args():
     parser.add_argument('--coop', action='store_true', help='Enable cooperative mode')
     parser.add_argument('--no_coop', dest='coop', action='store_false', help='Disable cooperative mode')
     parser.set_defaults(coop=True)
+
+    parser.add_argument('--stun', action='store_true', help='Enable stun move')
+    parser.add_argument('--no_stun', dest='stun', action='store_false', help='Disable stun move')
+    parser.set_defaults(stun=False)
 
     ## Netowrk Params
     parser.add_argument('--hidden_size', type=int, default=64, help='Hidden size for the network')
