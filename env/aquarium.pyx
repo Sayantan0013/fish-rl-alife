@@ -1,5 +1,6 @@
 #cython: language_level=3, boundscheck=False
 import inspect
+from os import name
 import numpy as np
 import bisect
 import itertools as it
@@ -22,6 +23,7 @@ OBSERVATION_MIN = -1.0
 OBSERVATION_MAX = 1.0
 ACTION_MIN = -1.0
 ACTION_MAX = 1.0
+DEFAULT_FISH_OBSERVATIONS = 4
 
 
 class Aquarium(Env):
@@ -51,6 +53,7 @@ class Aquarium(Env):
         stun_extend_obs=False,
         companion_coeff = 5.,
         bump_penalty = -0.01,
+        direction_with_angle = True,
     ):
         # if seed is None or seed == 'none':
         #     seed = int(1000000000 * np.random.random())
@@ -98,10 +101,14 @@ class Aquarium(Env):
 
         # Distance, angle to wall.
         self.observations_per_wall = 2
-        # Distance, angle to animal and orientation of animal.
-        self.observations_per_animal = 3
-        # # Distance, angle's sin & cos to animal and orientation of animal.
-        # self.observations_per_animal = 5
+        self.direction_with_angle = direction_with_angle
+        if self.direction_with_angle:
+            # Distance, angle to animal and orientation of animal.
+            self.observations_per_animal = 3
+        else:
+            # Distance, angle's sin & cos to animal and orientation of animal.
+            self.observations_per_animal = 5
+
         if self.stun_extend_obs:
             self.observations_per_animal += 1
 
@@ -109,7 +116,7 @@ class Aquarium(Env):
         # observations_per_wall?
         # own_orientation, ready_to_procreate
         self.observation_length = 2 \
-            + (self.observable_walls * self.observable_walls) \
+            + (self.observable_walls * self.observations_per_wall) \
             + (self.observable_fishes + self.observable_sharks) \
             * self.observations_per_animal
         if self.stun_extend_obs:
@@ -284,10 +291,10 @@ class Aquarium(Env):
 
         return types[s_type](self.next_shark_id, position, orientation)
 
-    def prepare_observation_for_controller(self, observation):
+    def prepare_observation_for_controller(self, observation, is_shark = True):
         w1 = 2
-        w2 = 2 + self.observable_walls * self.observations_per_wall
-        s2 = w2 + self.observations_per_animal * self.observable_sharks
+        w2 = 2 + (self.observations_per_wall * self.observable_walls if is_shark else DEFAULT_FISH_OBSERVATIONS)
+        s2 = w2 + (self.observations_per_animal * self.observable_sharks if is_shark else DEFAULT_FISH_OBSERVATIONS)
         return {
             "own_orientation": observation[0],
             "ready_to_procreate": observation[1],
@@ -351,7 +358,7 @@ class Aquarium(Env):
         for fish in self.fishes:
             # Fish action.
             observation: np.ndarray = named_joint_fish_observation[fish.name]
-            observation = self.prepare_observation_for_controller(observation)
+            observation = self.prepare_observation_for_controller(observation, is_shark = False)
             action = fish.get_action(**observation)
 
             speed: float = action[0]
@@ -439,7 +446,7 @@ class Aquarium(Env):
                 if n_participating_sharks >= len(self.sharks) - 1:
                     self.full_coop_kills += 1
 
-                reward_main_shark = 10. 
+                reward_main_shark = 10.
                 for shark_, dist, radius_dist in participating_sharks:
                     # Seems like another shark participated in the kill.
                     # They now have to share the reward based on the distance of
@@ -705,13 +712,13 @@ class Aquarium(Env):
             observed_borders = self.observe_borders(observer)
         else:
             observed_borders = [0.0] * (
-                self.observable_walls * self.observations_per_wall
+                self.observable_walls if "Shark" in observer.name() else DEFAULT_FISH_OBSERVATIONS * self.observations_per_wall
             )
 
         observed_sharks = self.build_animal_observation_list(
             observer,
             observe_animals,
-            self.observable_sharks,  # Predefined number of observable sharks. TODO: Rename to n_observable_sharks?
+            self.observable_sharks if "Shark" in observer.name() else DEFAULT_FISH_OBSERVATIONS ,  # Predefined number of observable sharks. TODO: Rename to n_observable_sharks?
             self.current_shark_population,
             self.sharks
         )
@@ -719,7 +726,7 @@ class Aquarium(Env):
         observed_fishes = self.build_animal_observation_list(
             observer,
             observe_animals,
-            self.observable_fishes,  # Predefined number of observable fishes. TODO: Rename to n_observable_fishes?
+            self.observable_fishes if "Shark" in observer.name() else DEFAULT_FISH_OBSERVATIONS ,  # Predefined number of observable fishes. TODO: Rename to n_observable_fishes?
             self.current_fish_population,
             self.fishes
         )
@@ -808,21 +815,21 @@ class Aquarium(Env):
                 min_distance = observer.radius + animal.radius
             else:
                 min_distance = 0
+
             max_distance = min(observer.view_distance, self.max_animal_view_distance)
             observation[0] = util.scale(distance, min_distance, max_distance, 0, OBSERVATION_MAX)
-            observation[1] = util.scale(direction, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
-            observation[2] = util.scale(animal.orientation, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
-            if self.stun_extend_obs:
-                observation[3] = int(animal.stun_steps != 0)
-
-            # max_distance = min(observer.view_distance, self.max_animal_view_distance)
-            # observation[0] = util.scale(distance, min_distance, max_distance, 0, OBSERVATION_MAX)
-            # animal_direction = util.scale(direction, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
-            # observation[1], observation[2] = np.sin(animal_direction), np.cos(animal_direction)
-            # observer_direction = util.scale(animal.orientation, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
-            # observation[3], observation[4] = np.sin(observer_direction), np.cos(observer_direction)
-            # if self.stun_extend_obs:
-            #     observation[5] = int(animal.stun_steps != 0)
+            if self.direction_with_angle:
+                observation[1] = util.scale(direction, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
+                observation[2] = util.scale(animal.orientation, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
+                if self.stun_extend_obs:
+                    observation[3] = int(animal.stun_steps != 0)
+            else:
+                animal_direction = util.scale(direction, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
+                observation[1], observation[2] = np.sin(animal_direction), np.cos(animal_direction)
+                observer_direction = util.scale(animal.orientation, -np.pi, np.pi, OBSERVATION_MIN, OBSERVATION_MAX)
+                observation[3], observation[4] = np.sin(observer_direction), np.cos(observer_direction)
+                if self.stun_extend_obs:
+                    observation[5] = int(animal.stun_steps != 0)
         return observation
 
     @property
@@ -846,7 +853,7 @@ class Aquarium(Env):
         env_params.update(self.shark_types)
         return banner + str(env_params)[1:-1].replace(', ', '\n')
 
-    def render(self, draw_view_distance: bool = True):
+    def render(self, draw_view_distance: bool = True, render_mode = 'human'):
         if self.close or not self.show_gui:
             return
 
@@ -901,4 +908,4 @@ class Aquarium(Env):
                     draw_coop_distance=draw_view_distance and isinstance(agent, Shark)
 
                 )
-        self.view.render()
+        return self.view.render(render_mode = render_mode)

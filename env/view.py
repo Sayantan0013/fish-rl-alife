@@ -24,8 +24,12 @@ class View:
         fps_string = self.font.render(str(int(fps)), True, pygame.Color('white'))
         self.screen.blit(fps_string, (1, 1))
 
-    def render(self):
-        pygame.display.flip()
+    def render(self, render_mode):
+        if render_mode == 'human':
+            pygame.display.flip()
+        elif render_mode == 'rgb_array':
+            pygame.display.flip()
+            return pygame.surfarray.array3d(self.screen)
         #pygame.time.delay(3000)
 
     def draw_creature(

@@ -20,14 +20,14 @@ from utils.utils import make_env_with_args, parse_args
 from gymnasium.wrappers import FrameStackObservation
 from eval import run
 from datetime import datetime
-    
+
 
 if __name__ == "__main__":
 
     args = parse_args()
-    
+
     if args.train:
-        
+
         wandb.init(
             project="fish-marl",
             config={"algo": "TD3"},
@@ -36,17 +36,17 @@ if __name__ == "__main__":
             save_code=False,
             mode="disabled" if not args.wandb else "online",
         )
-        
+
         wandb.config.update(args)
 
         # env = MultiAgentEnvWrapper(make_env_with_args(Aquarium, args))
-        
+
         def make_envs_from_base(base_env_class, num_envs):
             def make_env():
                 env_copy = make_env_with_args(base_env_class, args)
                 return MultiAgentEnvWrapper(env_copy)
                 # return FrameStackObservation(MultiAgentEnvWrapper(env_copy),stack_size=args.stack_size)
-            
+
             return [make_env for _ in range(num_envs)]
 
         envs = make_envs_from_base(Aquarium, args.num_envs)
@@ -56,9 +56,7 @@ if __name__ == "__main__":
         # env = FrameStackObservation(env,stack_size=10)
 
         log_dir = "./tensorboard_logs/"
-        # new_logger = configure(folder=None, format_strings=["wandb"]) 
-        
-        
+
         if args.load_model_path and os.path.exists(args.load_model_path):
             model = TD3.load(args.load_model_path,env=env,device="cpu", custom_objects={
                 "observation_space": env.observation_space,
@@ -69,17 +67,19 @@ if __name__ == "__main__":
         else:
             # model = PPO('MlpPolicy',env=env,verbose=1,tensorboard_log=log_dir,device="cpu")
             model = TD3(
-                    policy=CustomTD3Policy, 
-                    env=env, verbose=0, 
-                    tensorboard_log=log_dir, 
+                    policy=CustomTD3Policy,
+                env=env, verbose=0,
+                    tensorboard_log=log_dir,
                     device="cuda",
                     policy_kwargs={
                         "net_arch": [args.hidden_size] * args.network_depth
                         }
                     )
 
-        # model.set_logger(new_logger)
+        print(f'Model observation shape: {model.observation_space.shape}')
+        print(f"Model action space: {model.action_space.shape}")
         model.learn(args.total_timesteps, progress_bar=True, callback=WandbCallback())
+
 
         now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         save_path = 'models/TD3_model_' + now + '.zip'

@@ -123,6 +123,9 @@ class MultiAgentEnvWrapper(Wrapper):
         for shark in sharks:
             observations.append(obs.get(shark.name, np.array([0.] * self.n)))
         return np.concatenate(observations), {}
+    
+    def render(self, render_mode='human', **kwargs):
+        return self.env.render(render_mode=render_mode, **kwargs)
 
 
 class MultiAgentEnvAECWrapper(Wrapper):

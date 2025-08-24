@@ -1,60 +1,65 @@
 from env.aquarium import Aquarium
 import numpy as np
 import time
+from datetime import datetime
 
-from stable_baselines3 import DDPG, PPO, TD3
-from stable_baselines3 import A2C
-from stable_baselines3.common.logger import configure
-
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3 import DDPG, PPO, TD3, A2C
 from network import CustomTD3Policy
 from utils.wrappers import MultiAgentEnvWrapper
 from gymnasium.wrappers import FrameStackObservation
+from torch.utils.tensorboard import SummaryWriter
 from utils.utils import make_env_with_args
 from pathlib import Path
 import os
 
 
 def run(args: dict, model_path: Path, n_runs: int = 10):
+    # Create timestamped log directory
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_dir = Path("insight_logs") / timestamp
+    log_dir.mkdir(parents=True, exist_ok=True)
+
     env = make_env_with_args(Aquarium, args)
-
     env = MultiAgentEnvWrapper(env=env)
-    # env = FrameStackObservation(MultiAgentEnvWrapper(env),stack_size=args.stack_size)
-    # env = FrameStackObservation(env,stack_size=10)
-
+    writer = SummaryWriter(log_dir=str(log_dir))
 
     if os.path.exists(model_path):
-        # model = PPO.load(model_path,env=env,device="cpu")
-        model = TD3.load(model_path,env=env,device="cpu", custom_objects={
-        "observation_space": env.observation_space,
-        "action_space": env.action_space,
-        "policy_class": CustomTD3Policy,
-    })
+        model = TD3.load(model_path, env=env, device="cpu", custom_objects={
+            "observation_space": env.observation_space,
+            "action_space": env.action_space,
+            "policy_class": CustomTD3Policy,
+        })
         print('Found Model')
+    else:
+        print('Did not find the model')
+        model = TD3('MlpPolicy', env=env, device='cpu')
 
-    else:   
-        print('Did not found the model')
-        model = PPO('MlpPolicy',env=env,device='cpu')
-
-    for k in range(n_runs):
+    for run_idx in range(n_runs):
         obs, _ = env.reset()
-        i = 0
         rewards = []
         tot_rew = 0
+        step = 0
 
         while not env.unwrapped.is_finished:
-            i += 1
             if os.path.exists(model_path):
-                action, _ = model.predict(obs,deterministic=True)
+                action, _ = model.predict(obs, deterministic=True)
             else:
                 action = model.action_space.sample()
 
-            obs, reward, done, trunc , _ = env.step(action)
+            obs, reward, done, trunc, _ = env.step(action)
+
+            # Add images with run index in tag name
+            writer.add_image(f"attention/run_{run_idx}", model.policy.actor.mu.last_attention, global_step=step, dataformats='CHW')
+
             time.sleep(0.01)
-            # if(np.random.random()>0.8):
-            env.render()
+
+            img = env.render(render_mode='rgb_array')
+            writer.add_image(f"game_play/run_{run_idx}", img, global_step=step, dataformats='HWC')
+
             rewards.append(reward)
             tot_rew += reward
-            if(done):
+            step += 1
+            if done:
                 break
-        print('Somethings is Done with reward',tot_rew)
+
+        print(f'Run {run_idx} completed with total reward {tot_rew}')

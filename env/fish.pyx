@@ -44,7 +44,7 @@ class Fish(Animal, ABC):
         self.children = 0
         self.survived_steps = 0
 
-    def name(self):
+    def name(self) :
         return 'Fish.' + str(self._identifier)
 
     def is_ready_to_procreate(self) -> bool:

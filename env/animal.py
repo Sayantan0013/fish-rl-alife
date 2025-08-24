@@ -104,12 +104,12 @@ class Animal(ABC):
         pass
 
     # @abstractmethod
-    def name(self):
+    def name(self) -> str:
         """
         returns a unique name for each animal
         :return: the name of the animal as string
         """
-        pass
+        return 'Animal.' + str(self._identifier)
 
     def __hash__(self):
         return hash(self._identifier)

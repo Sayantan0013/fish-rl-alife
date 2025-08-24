@@ -96,16 +96,16 @@ class CustomTD3Policy(TD3Policy):
     def make_actor(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> CustomActor:
         actor_kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
         return CustomActor(**actor_kwargs).to(self.device)
-    
+
     def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> AvgContinuousCritic:
         critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
         return AvgContinuousCritic(**critic_kwargs).to(self.device)
 
 
 class DistQNetwork(nn.Module):
-    def __init__(self, 
+    def __init__(self,
                     input_dim,
-                    output_dim, 
+                    output_dim,
                     n_agents,
                     net_arch = [64, 64],
                     squash_output = True,
@@ -118,15 +118,15 @@ class DistQNetwork(nn.Module):
         self.aggregate_output = aggregate_output
 
         self.fc = nn.Sequential(*create_mlp(input_dim * self.n_agents,output_dim,net_arch=net_arch,squash_output=squash_output))
-    
+
     def forward(self, x):
         return self.fc(x)
-    
+
 
 class AttentionNetwork(nn.Module):
-    def __init__(self, 
+    def __init__(self,
                     input_dim,
-                    output_dim, 
+                    output_dim,
                     n_agents,
                     net_arch = [64, 64],
                     final_msg_dim = 16,
@@ -140,13 +140,14 @@ class AttentionNetwork(nn.Module):
         self.output_dim = output_dim
         self.scale = 1/np.sqrt(key_dim)
         self.aggregate_output = aggregate_output
+        self.last_attention = np.ones(n_agents)
 
         self.fc = nn.Sequential(*create_mlp(self.input_dim + final_msg_dim,output_dim,net_arch,squash_output=squash_output))
-    
+
         self.K = nn.Sequential(*create_mlp(self.input_dim, key_dim, [16]))
         self.Q = nn.Sequential(*create_mlp(self.input_dim, key_dim, [16]))
         self.V = nn.Sequential(*create_mlp(self.input_dim, final_msg_dim, [32]))
-        
+
         if self.aggregate_output == 'mean':
             self.agg = lambda x: torch.mean(x,dim=-2)
         elif self.aggregate_output == 'sum':
@@ -156,7 +157,7 @@ class AttentionNetwork(nn.Module):
             self.agg = lambda x: self.mixer(x.transpose(-1, -2)).unsqueeze(-1)
         else:
             self.agg = lambda x: torch.flatten(x,start_dim=-2)
-        
+
         # LSTM for recurrency
         # self.lstm = nn.LSTM( rnn_hidden_dim, rnn_hidden_dim, batch_first=True)
 
@@ -175,6 +176,8 @@ class AttentionNetwork(nn.Module):
 
         kq_prod = (k.unsqueeze(-2)*q.unsqueeze(-3)).sum(-1)*self.scale
         attention = torch.softmax(kq_prod,dim=-1)
+        if not self.training:
+            self.last_attention = attention.detach().cpu().numpy()
         cumulated = torch.bmm(attention, v)
 
         fc_input = torch.cat([cumulated,observations],dim=-1)
@@ -187,10 +190,10 @@ class AttentionNetwork(nn.Module):
         # 						torch.zeros(1, x.shape[0], 128).to(x.device))
 
         # x, self.hidden_state = self.lstm(x.unsqueeze(0), self.hidden_state)
-        # x = self.q_net(x.squeeze(0))  # Remove batch dim  
+        # x = self.q_net(x.squeeze(0))  # Remove batch dim
 
         # print("x shape:\t",x.shape)
-        
+
         out = self.agg(x)
 
         return out
