@@ -30,7 +30,8 @@ def make_env_with_args(Env: Env, args):
         use_global_reward=args.use_global_reward,
         companion_coeff = args.companion_coeff,
         bump_penalty = args.bump_penalty,
-        direction_with_angle = args.angle
+        direction_with_angle = args.angle,
+        coop=args.coop
     )
 
     env.select_fish_types(args.n_random_fish, args.n_turnaway_fish,0)
@@ -92,6 +93,10 @@ def parse_args():
     parser.add_argument('--wandb',action='store_true', help='Enable Weights & Biases logging')
     parser.add_argument('--no_wandb', dest='wandb', action='store_false', help='Disable Weights & Biases logging')
     parser.set_defaults(wandb=False)
+
+    parser.add_argument('--coop', action='store_true', help='Enable cooperative mode')
+    parser.add_argument('--no_coop', dest='coop', action='store_false', help='Disable cooperative mode')
+    parser.set_defaults(coop=True)
 
     ## Netowrk Params
     parser.add_argument('--hidden_size', type=int, default=64, help='Hidden size for the network')
