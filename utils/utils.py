@@ -64,7 +64,7 @@ def parse_args():
     parser.add_argument('--size', type=int, default=30, help='Size of the environment')
     parser.add_argument('--max_steps', type=int, default=300, help='Maximum number of steps per episode')
     parser.add_argument('--max_fish', type=int, default=8, help='Maximum number of fish')
-    parser.add_argument('--max_sharks', type=int, default=3, help='Maximum number of sharks')
+    parser.add_argument('--max_sharks', type=int, default=1, help='Maximum number of sharks')
     parser.add_argument('--torus', action='store_true', help='Enable toroidal world (wrap around edges)')
     parser.add_argument('--no_torus', dest='torus', action='store_false', help='Disable toroidal world')
     parser.set_defaults(torus=True)
@@ -74,6 +74,8 @@ def parse_args():
     parser.add_argument('--num_envs', '-ne', type=int, default=8, help='Number of Parallel environments in gymnasium')
     parser.add_argument('--n_random_fish', '-rf', type=int, default=2, help='Number of Random Fish in the sea')
     parser.add_argument('--n_turnaway_fish','-tf',type=int, default=2, help='Number of Turnaway fish in the sea')
+    parser.add_argument('--rnn_hidden_state_dim', type=int, default=32, help='Dimension of RNN hidden state')
+    parser.add_argument('--learning_rate', type=float, default=1e-3, help='Learning rate for the model')
 
 
     # Co-op Params

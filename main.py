@@ -29,7 +29,7 @@ if __name__ == "__main__":
     if args.train:
 
         wandb.init(
-            project="fish-marl",
+            project="fish-marl-experiment",
             config={"algo": "TD3"},
             sync_tensorboard=True,   # You don't want tensorboard
             monitor_gym=False,        # You don't want video
@@ -69,9 +69,10 @@ if __name__ == "__main__":
             # model = PPO('MlpPolicy',env=env,verbose=1,tensorboard_log=log_dir,device="cpu")
             model = TD3(
                     policy=CustomTD3Policy,
-                env=env, verbose=0,
+                    env=env, verbose=0,
                     tensorboard_log=log_dir,
                     device="cuda",
+                    learning_rate=args.learning_rate,
                     policy_kwargs={
                         "net_arch": [args.hidden_size] * args.network_depth
                         }
