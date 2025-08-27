@@ -46,10 +46,12 @@ class MultiAgentEnvWrapper(Wrapper):
     def __init__(self, env, args):
         self.env = env
         self.num_sharks = len(list(env.sharks))
-        self.env.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.env.max_sharks,2))
+        self.rnn_hidden_state_dim = args.rnn_hidden_state_dim
+        self.env.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.env.max_sharks, 2 + 2 * self.rnn_hidden_state_dim))
         self.n = 2 + self.env.observable_sharks * (3 if args.angle else 5) +\
             self.env.observable_fishes * (3 if args.angle else 5) +\
-            self.env.observable_walls * 2
+            self.env.observable_walls * 2 +\
+            self.rnn_hidden_state_dim * 2
         self.env.observation_space = spaces.Box(
             low=-1.0, high=1.0, shape=(self.env.max_sharks* self.n,)
         )
@@ -89,6 +91,8 @@ class MultiAgentEnvWrapper(Wrapper):
         if(len(actions.shape)>2):
             actions = actions[0]
 
+        actions, hidden_states = actions[:, :-2 * self.rnn_hidden_state_dim], actions[:, -2 * self.rnn_hidden_state_dim: ]
+
         for i, shark in enumerate(sharks):
             # if i != 0:
             #     action = model_inference(self.model, self.last_obs[shark.name])
@@ -106,8 +110,9 @@ class MultiAgentEnvWrapper(Wrapper):
             rewards.append(reward.get(shark.name,0.0))
         self.step_count += 1
 
+        # print('Obs sent:',observations)
         return (
-            np.concatenate(observations),
+            np.concatenate([np.concatenate(observations),hidden_states.flatten()],axis=-1),
             np.mean(rewards),
             np.all(dones),
             False,
@@ -121,7 +126,9 @@ class MultiAgentEnvWrapper(Wrapper):
         self.last_obs = obs
         observations = []
         for shark in sharks:
-            observations.append(obs.get(shark.name, np.array([0.] * self.n)))
+            observations.append(np.concatenate([obs.get(shark.name, np.array([0.] * self.n)),
+                                            np.array([0.] * (2 * self.rnn_hidden_state_dim))]))
+
         return np.concatenate(observations), {}
 
     def render(self, render_mode='human', **kwargs):

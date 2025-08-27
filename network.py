@@ -128,24 +128,26 @@ class AttentionNetwork(nn.Module):
                     input_dim,
                     output_dim,
                     n_agents,
-                    net_arch = [64, 64],
+                    net_arch = [64, 32],
                     final_msg_dim = 16,
                     key_dim = 4,
                     squash_output = True,
                     aggregate_output = None,
                 ):
         super().__init__()
-        self.input_dim = input_dim
+        self.rnn_hidden_dim = 32
+        self.input_dim = input_dim - 2 * self.rnn_hidden_dim
         self.n_agents = n_agents
-        self.output_dim = output_dim
+        self.output_dim = output_dim - 2 * self.rnn_hidden_dim
         self.scale = 1/np.sqrt(key_dim)
         self.aggregate_output = aggregate_output
         self.last_attention : np.ndarray = np.ones(n_agents)
 
-        self.fc = nn.Sequential(*create_mlp(self.input_dim + final_msg_dim,output_dim,net_arch,squash_output=squash_output))
+        # self.fc = nn.Sequential(*create_mlp(self.input_dim + final_msg_dim, self.rnn_hidden_dim, net_arch ,squash_output=squash_output))
+        self.fc = nn.Sequential(*create_mlp(self.input_dim + final_msg_dim, self.rnn_hidden_dim, net_arch))
 
-        self.K = nn.Sequential(*create_mlp(self.input_dim, key_dim, [16]))
-        self.Q = nn.Sequential(*create_mlp(self.input_dim, key_dim, [16]))
+        self.K = nn.Sequential(*create_mlp(self.input_dim, key_dim, [8]))
+        self.Q = nn.Sequential(*create_mlp(self.input_dim, key_dim, [8]))
         self.V = nn.Sequential(*create_mlp(self.input_dim, final_msg_dim, [32]))
 
         if self.aggregate_output == 'mean':
@@ -159,17 +161,27 @@ class AttentionNetwork(nn.Module):
             self.agg = lambda x: torch.flatten(x,start_dim=-2)
 
         # LSTM for recurrency
-        # self.lstm = nn.LSTM( rnn_hidden_dim, rnn_hidden_dim, batch_first=True)
+        self.lstm = nn.LSTM(self.rnn_hidden_dim, self.rnn_hidden_dim, batch_first=True)
 
-        # # Final layer to produce Q-values
-        # self.q_net = nn.Linear( rnn_hidden_dim, 5)
+        # Final layer to produce Q-values
+        self.q_net = nn.Sequential(*create_mlp( self.input_dim + final_msg_dim + self.rnn_hidden_dim, self.output_dim, [32], squash_output=squash_output))
 
-        # # Hidden state initialization
-        # self.hidden_state = None  # (h_n, c_n) for LSTM
+        # Hidden state initialization
+        self.hidden_state = None  # (h_n, c_n) for LSTM
 
     def forward(self, observations):
         obs_shape = observations.shape
+        observations, hidden_states = torch.split(observations,
+                                        [observations.size(-1) - 2 * self.rnn_hidden_dim * self.n_agents ,
+                                        2 * self.rnn_hidden_dim * self.n_agents], dim=-1)
+
+        hidden_states = hidden_states.reshape(hidden_states.shape[:-1]+(self.n_agents,-1))
+
         observations = observations.reshape(obs_shape[:-1]+(self.n_agents,-1))
+
+        # if(obs_shape[0] == 1):
+        #     print('Obs Recieved', observations)
+
         k = self.K(observations)
         q = self.Q(observations)
         v = self.V(observations)
@@ -183,17 +195,33 @@ class AttentionNetwork(nn.Module):
         fc_input = torch.cat([cumulated,observations],dim=-1)
 
         x = self.fc(fc_input)
+        x = x.view(-1,1,x.shape[-1])
 
-        # # Ensure LSTM state is maintained
+        # Ensure LSTM state is maintained
         # if self.hidden_state is None:
-        # 	self.hidden_state = (torch.zeros(1, x.shape[0], 128).to(x.device),
-        # 						torch.zeros(1, x.shape[0], 128).to(x.device))
+        #     self.hidden_state = (torch.zeros(1, x.shape[0], self.rnn_hidden_dim).to(x.device),
+        #                         torch.zeros(1, x.shape[0], self.rnn_hidden_dim).to(x.device))
 
-        # x, self.hidden_state = self.lstm(x.unsqueeze(0), self.hidden_state)
-        # x = self.q_net(x.squeeze(0))  # Remove batch dim
+        h_0, c_0 = torch.split(hidden_states, [hidden_states.size(-1) - self.rnn_hidden_dim, self.rnn_hidden_dim], dim=-1)
+        hidden_state = (h_0.contiguous().view(-1,1,h_0.shape[-1]).transpose(0, 1), c_0.contiguous().view(-1,1,h_0.shape[-1]).transpose(0, 1))
 
-        # print("x shape:\t",x.shape)
+        lstm_out, (h_0, c_0) = self.lstm(x, hidden_state)
 
-        out = self.agg(x)
 
-        return out
+        x = self.q_net(torch.cat([fc_input,lstm_out],dim=-1))  # Remove batch dim
+
+        x = self.agg(x)
+
+        x, h_0, c_0  =  x.view(-1,self.n_agents * x.shape[-1]),\
+                        h_0.view(-1,self.n_agents *  self.rnn_hidden_dim),\
+                        c_0.view(-1,self.n_agents * self.rnn_hidden_dim)
+
+        # if(obs_shape[0] == 1):
+        #     print('Action alone:',x)
+
+        x = torch.cat([x, h_0, c_0], dim=-1)
+
+        # if(obs_shape[0] == 1):
+        #     print('Action alone with hidden:', x)
+
+        return x
