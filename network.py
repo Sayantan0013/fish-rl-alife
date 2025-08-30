@@ -22,15 +22,33 @@ class CustomActor(Actor):
     """
     Actor network (policy) for TD3.
     """
-    def __init__(self, *args, **kwargs):
-        super(CustomActor, self).__init__(*args, **kwargs)
-        action_dim = get_action_dim(self.action_space)
+    def __init__(
+        self,
+        observation_space: spaces.Space,
+        action_space: spaces.Box,
+        net_arch: dict[str, list[int]],
+        features_extractor: nn.Module,
+        features_dim: int,
+        activation_fn: type[nn.Module] = nn.ReLU,
+        normalize_images: bool = True,
+    ):
+        super(CustomActor, self).__init__(
+            observation_space = observation_space,
+            action_space = action_space,
+            net_arch = [64,64],
+            features_extractor = features_extractor,
+            features_dim = features_dim,
+        )
         obs_dim = get_obs_shape(self.observation_space)
         num_agents, individual_action_dim = self.action_space.shape
         individual_obs_dim = np.prod(obs_dim)//num_agents
 
-
-        self.mu = AttentionNetwork(individual_obs_dim, individual_action_dim, num_agents, net_arch=self.net_arch)
+        self.mu = AttentionNetwork(
+                        individual_obs_dim,
+                        individual_action_dim,
+                        num_agents,
+                        **net_arch
+        )
 
 class AvgContinuousCritic(BaseModel):
 
@@ -129,8 +147,10 @@ class AttentionNetwork(nn.Module):
                     output_dim,
                     n_agents,
                     net_arch = [64, 64],
-                    final_msg_dim = 16,
+                    msg_dim = 16,
                     key_dim = 4,
+                    key_net_arch = [32],
+                    msg_net_arch = [32],
                     squash_output = True,
                     aggregate_output = None,
                 ):
@@ -142,11 +162,14 @@ class AttentionNetwork(nn.Module):
         self.aggregate_output = aggregate_output
         self.last_attention : np.ndarray = np.ones(n_agents)
 
-        self.fc = nn.Sequential(*create_mlp(self.input_dim + final_msg_dim,output_dim,net_arch,squash_output=squash_output))
+        print("Initializing network")
+        print(net_arch, msg_net_arch, key_net_arch)
 
-        self.K = nn.Sequential(*create_mlp(self.input_dim, key_dim, [16]))
-        self.Q = nn.Sequential(*create_mlp(self.input_dim, key_dim, [16]))
-        self.V = nn.Sequential(*create_mlp(self.input_dim, final_msg_dim, [32]))
+        self.fc = nn.Sequential(*create_mlp(self.input_dim + msg_dim,output_dim,net_arch,squash_output=squash_output))
+
+        self.K = nn.Sequential(*create_mlp(self.input_dim, key_dim, key_net_arch))
+        self.Q = nn.Sequential(*create_mlp(self.input_dim, key_dim, key_net_arch))
+        self.V = nn.Sequential(*create_mlp(self.input_dim, msg_dim, msg_net_arch))
 
         if self.aggregate_output == 'mean':
             self.agg = lambda x: torch.mean(x,dim=-2)

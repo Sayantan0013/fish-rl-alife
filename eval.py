@@ -59,7 +59,7 @@ def run(args: dict, model_path: Path, n_runs: int = 10):
 
             time.sleep(0.01)
 
-            img = env.render(render_mode='rgb_array')
+            img = env.render(render_mode='rgb_array_only')
             writer.add_image(f"game_play/run_{run_idx}", img, global_step=step, dataformats='HWC')
 
             rewards.append(reward)

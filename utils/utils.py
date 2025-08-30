@@ -128,4 +128,13 @@ def parse_args():
     parser.add_argument('--hidden_size', type=int, default=64, help='Hidden size for the network')
     parser.add_argument('--network_depth', type=int, default=2, help='Depth of the network')
 
+    parser.add_argument('--key_hidden_size', type=int, default=16, help='Hidden size for the network')
+    parser.add_argument('--key_network_depth', type=int, default=1, help='Depth of the network')
+
+    parser.add_argument('--msg_hidden_size', type=int, default=32, help='Hidden size for the network')
+    parser.add_argument('--msg_network_depth', type=int, default=1, help='Depth of the network')
+
+    parser.add_argument('--key_dim', type=int, default=4, help='Hidden size for the network')
+    parser.add_argument('--msg_dim', type=int, default=16, help='Depth of the network')
+
     return parser.parse_args()

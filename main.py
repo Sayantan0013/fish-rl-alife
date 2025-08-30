@@ -68,7 +68,17 @@ if __name__ == "__main__":
                     device="cuda",
                     learning_rate=args.learning_rate,
                     policy_kwargs={
-                        "net_arch": [args.hidden_size] * args.network_depth
+                        "net_arch":
+                            {
+                                "pi": {
+                                    "net_arch": [args.hidden_size] * args.network_depth,
+                                    "key_net_arch": [args.key_hidden_size] * args.key_network_depth,
+                                    "msg_net_arch": [args.msg_hidden_size] * args.msg_network_depth,
+                                    "key_dim": args.key_dim,
+                                    "msg_dim": args.msg_dim,
+                                },
+                                "qf": [args.hidden_size] * args.network_depth,
+                            }
                         }
                     )
 
