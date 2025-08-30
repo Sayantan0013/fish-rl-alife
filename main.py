@@ -1,25 +1,20 @@
-# from pipeline import main
-from env.aquarium import Aquarium
-import numpy as np
-import time
-import os
-
-from stable_baselines3 import DDPG, PPO, TD3
-from stable_baselines3 import A2C
-from stable_baselines3.common.logger import configure
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecMonitor
-import wandb
-from wandb.integration.sb3 import WandbCallback
-
-from stable_baselines3.common.callbacks import BaseCallback
-from network import CustomTD3Policy
-from utils.wrappers import MultiAgentEnvWrapper
 from utils.utils import make_env_with_args, parse_args, check_model_path
-# from utils.callbacks import WandbCallback
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
+from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.logger import configure
 from gymnasium.wrappers import FrameStackObservation
-from eval import run
+from stable_baselines3 import DDPG, PPO, TD3, A2C
+from utils.wrappers import MultiAgentEnvWrapper
+from wandb.integration.sb3 import WandbCallback
+# from utils.callbacks import WandbCallback
+from network import CustomTD3Policy
+
+from env.aquarium import Aquarium
 from datetime import datetime
+from pathlib import Path
+from eval import run
+import wandb
 
 
 if __name__ == "__main__":
@@ -57,8 +52,7 @@ if __name__ == "__main__":
 
         log_dir = "./tensorboard_logs/"
 
-        if args.load_model_path:
-            model_path = check_model_path(args.load_model_path)
+        if model_path := check_model_path(args.load_model_path):
             model = TD3.load(model_path,env=env,device="cpu", custom_objects={
                 "observation_space": env.observation_space,
                 "action_space": env.action_space,
@@ -82,13 +76,15 @@ if __name__ == "__main__":
         print(f"Model action space: {model.action_space.shape}")
         model.learn(args.total_timesteps, progress_bar=True, callback=WandbCallback())
 
+        # if not save_path :=
+        #     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        #     save_path = 'models/TD3_model_' + now + '.zip'
 
-        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        save_path = 'models/TD3_model_' + now + '.zip'
+        save_path =  Path(f'models/{args.save_model_path}').with_suffix('.zip')
         model.save(save_path)
     else:
         save_path = check_model_path(args.load_model_path)
 
 
     args.show_gui = True
-    run(args, save_path, n_runs = 5)
+    run(args, save_path, n_runs = 1)

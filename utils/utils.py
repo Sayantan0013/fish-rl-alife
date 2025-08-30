@@ -25,7 +25,8 @@ def check_model_path(input_string):
         path = path.with_suffix('.zip')
 
     if not path.exists():
-        raise ValueError("Path Not found")
+        print('No Model found to load')
+        return False
     return str(path)
 
 def make_env_with_args(Env: Env, args):
@@ -64,18 +65,21 @@ def parse_args():
     parser.add_argument('--size', type=int, default=30, help='Size of the environment')
     parser.add_argument('--max_steps', type=int, default=300, help='Maximum number of steps per episode')
     parser.add_argument('--max_fish', type=int, default=8, help='Maximum number of fish')
-    parser.add_argument('--max_sharks', type=int, default=1, help='Maximum number of sharks')
-    parser.add_argument('--torus', action='store_true', help='Enable toroidal world (wrap around edges)')
-    parser.add_argument('--no_torus', dest='torus', action='store_false', help='Disable toroidal world')
-    parser.set_defaults(torus=True)
+    parser.add_argument('--max_sharks', type=int, default=4, help='Maximum number of sharks')
     parser.add_argument('--load_model_path','-l', type=str, default=None, help='Load the Given model')
+    parser.add_argument('--save_model_path','-s', type=str, default=None, help='Save model path')
+    parser.add_argument('--models_dir','-d', type=str, default=None, help='Model saving base dicrectory')
     parser.add_argument('--total_timesteps','-t', type=int, default=200_000, help='Total number of training timesteps')
     parser.add_argument('--stack_size', type=int, default=1, help='Stack size for frame stacking')
     parser.add_argument('--num_envs', '-ne', type=int, default=8, help='Number of Parallel environments in gymnasium')
-    parser.add_argument('--n_random_fish', '-rf', type=int, default=2, help='Number of Random Fish in the sea')
-    parser.add_argument('--n_turnaway_fish','-tf',type=int, default=2, help='Number of Turnaway fish in the sea')
+    parser.add_argument('--n_random_fish', '-rf', type=int, default=1, help='Number of Random Fish in the sea')
+    parser.add_argument('--n_turnaway_fish','-tf',type=int, default=3, help='Number of Turnaway fish in the sea')
     parser.add_argument('--rnn_hidden_state_dim', type=int, default=32, help='Dimension of RNN hidden state')
-    parser.add_argument('--learning_rate', type=float, default=1e-3, help='Learning rate for the model')
+    parser.add_argument('--learning_rate', type=float, default=5e-4, help='Learning rate for the model')
+
+    parser.add_argument('--torus', action='store_true', help='Enable toroidal world (wrap around edges)')
+    parser.add_argument('--no_torus', dest='torus', action='store_false', help='Disable toroidal world')
+    parser.set_defaults(torus=True)
 
 
     # Co-op Params

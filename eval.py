@@ -1,15 +1,14 @@
+from gymnasium.wrappers import FrameStackObservation
+from stable_baselines3 import DDPG, PPO, TD3, A2C
+from torch.utils.tensorboard import SummaryWriter
+from utils.wrappers import MultiAgentEnvWrapper
+from utils.utils import make_env_with_args
+from network import CustomTD3Policy
 from env.aquarium import Aquarium
+from datetime import datetime
+from pathlib import Path
 import numpy as np
 import time
-from datetime import datetime
-
-from stable_baselines3 import DDPG, PPO, TD3, A2C
-from network import CustomTD3Policy
-from utils.wrappers import MultiAgentEnvWrapper
-from gymnasium.wrappers import FrameStackObservation
-from torch.utils.tensorboard import SummaryWriter
-from utils.utils import make_env_with_args
-from pathlib import Path
 import os
 
 

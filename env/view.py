@@ -30,6 +30,8 @@ class View:
         elif render_mode == 'rgb_array':
             pygame.display.flip()
             return pygame.surfarray.array3d(self.screen)
+        elif render_mode =='rgb_array_only':
+            return pygame.surfarray.array3d(self.screen)
         #pygame.time.delay(3000)
 
     def draw_creature(
@@ -62,7 +64,7 @@ class View:
 
         if coop_r > 0 and p_x + coop_r >= 0 and p_x - coop_r < self.width and p_y + coop_r >= 0 and p_y - coop_r < self.height:
             pygame.draw.circle(self.screen, pygame.Color('Green'), (p_x, p_y), coop_r, 2)
- 
+
 
     @staticmethod
     def check_for_interrupt():
