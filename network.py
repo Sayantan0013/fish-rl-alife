@@ -141,6 +141,27 @@ class DistQNetwork(nn.Module):
         return self.fc(x)
 
 
+def get_activation_fn(activation):
+    if isinstance(activation, str):
+        activation = activation.lower()
+        if activation == 'relu':
+            return nn.ReLU
+        elif activation == 'leaky_relu':
+            return nn.LeakyReLU
+        elif activation == 'elu':
+            return nn.ELU
+        elif activation == 'tanh':
+            return nn.Tanh
+        elif activation == 'sigmoid':
+            return nn.Sigmoid
+        elif activation == 'identity':
+            return nn.Identity
+        else:
+            raise ValueError(f"Unknown activation function: {activation}")
+    else:
+        raise ValueError(f"Invalid activation function: {activation}")
+
+
 class AttentionNetwork(nn.Module):
     def __init__(self,
                     input_dim,
@@ -153,6 +174,7 @@ class AttentionNetwork(nn.Module):
                     msg_net_arch = [32],
                     squash_output = True,
                     aggregate_output = None,
+                    activation = 'relu'
                 ):
         super().__init__()
         self.input_dim = input_dim
@@ -161,15 +183,13 @@ class AttentionNetwork(nn.Module):
         self.scale = 1/np.sqrt(key_dim)
         self.aggregate_output = aggregate_output
         self.last_attention : np.ndarray = np.ones(n_agents)
+        self.activation = get_activation_fn(activation)
 
-        print("Initializing network")
-        print(net_arch, msg_net_arch, key_net_arch)
+        self.fc = nn.Sequential(*create_mlp(self.input_dim + msg_dim,output_dim,net_arch,squash_output=squash_output, activation_fn = self.activation))
 
-        self.fc = nn.Sequential(*create_mlp(self.input_dim + msg_dim,output_dim,net_arch,squash_output=squash_output))
-
-        self.K = nn.Sequential(*create_mlp(self.input_dim, key_dim, key_net_arch))
-        self.Q = nn.Sequential(*create_mlp(self.input_dim, key_dim, key_net_arch))
-        self.V = nn.Sequential(*create_mlp(self.input_dim, msg_dim, msg_net_arch))
+        self.K = nn.Sequential(*create_mlp(self.input_dim, key_dim, key_net_arch, activation_fn = self.activation))
+        self.Q = nn.Sequential(*create_mlp(self.input_dim, key_dim, key_net_arch, activation_fn = self.activation))
+        self.V = nn.Sequential(*create_mlp(self.input_dim, msg_dim, msg_net_arch, activation_fn = self.activation))
 
         if self.aggregate_output == 'mean':
             self.agg = lambda x: torch.mean(x,dim=-2)

@@ -76,6 +76,7 @@ def parse_args():
     parser.add_argument('--n_turnaway_fish','-tf',type=int, default=3, help='Number of Turnaway fish in the sea')
     parser.add_argument('--rnn_hidden_state_dim', type=int, default=32, help='Dimension of RNN hidden state')
     parser.add_argument('--learning_rate', type=float, default=5e-4, help='Learning rate for the model')
+    parser.add_argument('--activation', '-a', type=str, default='relu', help='Activation function for the model')
 
     parser.add_argument('--torus', action='store_true', help='Enable toroidal world (wrap around edges)')
     parser.add_argument('--no_torus', dest='torus', action='store_false', help='Disable toroidal world')

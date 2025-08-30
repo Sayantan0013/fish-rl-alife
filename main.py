@@ -76,6 +76,7 @@ if __name__ == "__main__":
                                     "msg_net_arch": [args.msg_hidden_size] * args.msg_network_depth,
                                     "key_dim": args.key_dim,
                                     "msg_dim": args.msg_dim,
+                                    "activation": args.activation,
                                 },
                                 "qf": [args.hidden_size] * args.network_depth,
                             }
