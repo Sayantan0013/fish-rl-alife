@@ -182,8 +182,14 @@ class AttentionNetwork(nn.Module):
         self.output_dim = output_dim
         self.scale = 1/np.sqrt(key_dim)
         self.aggregate_output = aggregate_output
-        self.last_attention : np.ndarray = np.ones(n_agents)
         self.activation = get_activation_fn(activation)
+
+        self.last_attention : np.ndarray = np.ones(n_agents)
+        self.last_k : np.ndarray = np.zeros(n_agents)
+        self.last_q : np.ndarray = np.zeros(n_agents)
+        self.last_v : np.ndarray = np.zeros(n_agents)
+
+
 
         self.fc = nn.Sequential(*create_mlp(self.input_dim + msg_dim,output_dim,net_arch,squash_output=squash_output, activation_fn = self.activation))
 
@@ -221,6 +227,10 @@ class AttentionNetwork(nn.Module):
         attention = torch.softmax(kq_prod,dim=-1)
         if not self.training:
             self.last_attention = attention.detach().cpu().numpy()
+            self.last_k = k.detach().cpu().numpy()
+            self.last_q = q.detach().cpu().numpy()
+            self.last_v = v.detach().cpu().numpy()
+
         cumulated = torch.bmm(attention, v)
 
         fc_input = torch.cat([cumulated,observations],dim=-1)

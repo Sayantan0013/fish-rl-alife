@@ -49,6 +49,9 @@ def run(args: dict, model_path: Path, n_runs: int = 10):
 
             # Add images with run index in tag name
             writer.add_image(f"attention/run_{run_idx}", model.policy.actor.mu.last_attention, global_step=step, dataformats='CHW')
+            writer.add_image(f"key/run_{run_idx}", model.policy.actor.mu.last_k, global_step=step, dataformats='CHW')
+            writer.add_image(f"query/run_{run_idx}", model.policy.actor.mu.last_q, global_step=step, dataformats='CHW')
+            writer.add_image(f"message/run_{run_idx}", model.policy.actor.mu.last_v, global_step=step, dataformats='CHW')
 
             norms = np.linalg.norm(model.policy.actor.mu.last_attention, axis=1).flatten()
 
@@ -59,7 +62,7 @@ def run(args: dict, model_path: Path, n_runs: int = 10):
 
             time.sleep(0.01)
 
-            img = env.render(render_mode='rgb_array_only')
+            img = env.render(render_mode=args.eval_render_mode)
             writer.add_image(f"game_play/run_{run_idx}", img, global_step=step, dataformats='HWC')
 
             rewards.append(reward)
