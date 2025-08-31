@@ -78,7 +78,7 @@ def parse_args():
     parser.add_argument('--learning_rate', type=float, default=5e-4, help='Learning rate for the model')
     parser.add_argument('--activation', '-a', type=str, default='relu', help='Activation function for the model')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for the model')
-    parser.add_argument('--eval_render_mode','-erm', type=str, choices=['human', 'rgb_array', 'rgb_array_only'], default='rgb_array', help='Render mode for evaluation')
+    parser.add_argument('--eval_render_mode','-erm', type=str, choices=[ 'rgb_array', 'rgb_array_only'], default='rgb_array', help='Render mode for evaluation')
 
     parser.add_argument('--torus', action='store_true', help='Enable toroidal world (wrap around edges)')
     parser.add_argument('--no_torus', dest='torus', action='store_false', help='Disable toroidal world')
