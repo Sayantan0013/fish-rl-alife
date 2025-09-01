@@ -1,3 +1,4 @@
+from argparse import Namespace
 from gymnasium.wrappers import FrameStackObservation
 from stable_baselines3 import DDPG, PPO, TD3, A2C
 from torch.utils.tensorboard import SummaryWriter
@@ -12,7 +13,7 @@ import time
 import os
 
 
-def run(args: dict, model_path: Path, n_runs: int = 10):
+def run(args: Namespace, model_path: Path, n_runs: int = 10):
     # Create timestamped log directory
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_dir = Path("insight_logs") / timestamp
@@ -23,7 +24,7 @@ def run(args: dict, model_path: Path, n_runs: int = 10):
     writer = SummaryWriter(log_dir=str(log_dir))
 
     if os.path.exists(model_path):
-        model = TD3.load(model_path, env=env, device="cpu", custom_objects={
+        model = TD3.load(model_path, env=env, device="cuda", custom_objects={
             "observation_space": env.observation_space,
             "action_space": env.action_space,
             "policy_class": CustomTD3Policy,
@@ -32,6 +33,9 @@ def run(args: dict, model_path: Path, n_runs: int = 10):
     else:
         print('Did not find the model')
         model = TD3('MlpPolicy', env=env, device='cpu')
+
+    average_total_reward = []
+    average_episode_length = []
 
     for run_idx in range(n_runs):
         obs, _ = env.reset()
@@ -61,9 +65,9 @@ def run(args: dict, model_path: Path, n_runs: int = 10):
 
 
             time.sleep(0.01)
-
-            img = env.render(render_mode=args.eval_render_mode)
-            writer.add_image(f"game_play/run_{run_idx}", img, global_step=step, dataformats='HWC')
+            if args.show_gui:
+                img = env.render(render_mode=args.eval_render_mode)
+                writer.add_image(f"game_play/run_{run_idx}", img, global_step=step, dataformats='HWC')
 
             rewards.append(reward)
             tot_rew += reward
@@ -72,3 +76,7 @@ def run(args: dict, model_path: Path, n_runs: int = 10):
                 break
 
         print(f'Run {run_idx} completed with total reward {tot_rew}')
+        average_total_reward.append(tot_rew)
+        average_episode_length.append(step)
+
+    return np.mean(average_total_reward), np.mean(average_episode_length)

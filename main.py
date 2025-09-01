@@ -1,3 +1,4 @@
+from argparse import Namespace
 from utils.utils import make_env_with_args, parse_args, check_model_path
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 from stable_baselines3.common.callbacks import BaseCallback
@@ -17,22 +18,9 @@ from eval import run
 import wandb
 
 
-if __name__ == "__main__":
 
-    args = parse_args()
-
+def train(args):
     if args.train:
-
-        wandb.init(
-            project="fish-marl-experiment",
-            config={"algo": "TD3"},
-            sync_tensorboard=True,   # You don't want tensorboard
-            monitor_gym=False,        # You don't want video
-            save_code=False,
-            mode="disabled" if not args.wandb else "online",
-        )
-
-        wandb.config.update(args)
 
         # env = MultiAgentEnvWrapper(make_env_with_args(Aquarium, args))
 
@@ -53,7 +41,7 @@ if __name__ == "__main__":
         log_dir = "./tensorboard_logs/"
 
         if model_path := check_model_path(args.load_model_path):
-            model = TD3.load(model_path,env=env,device="cpu", custom_objects={
+            model = TD3.load(model_path,env=env,device="cuda", custom_objects={
                 "observation_space": env.observation_space,
                 "action_space": env.action_space,
                 "policy_class": CustomTD3Policy,
@@ -67,18 +55,19 @@ if __name__ == "__main__":
                     tensorboard_log=log_dir,
                     device="cuda",
                     learning_rate=args.learning_rate,
+                    tau=0.01,
                     policy_kwargs={
                         "net_arch":
                             {
                                 "pi": {
-                                    "net_arch": [args.hidden_size] * args.network_depth,
+                                    "net_arch": [args.pi_hidden_size] * args.pi_network_depth,
                                     "key_net_arch": [args.key_hidden_size] * args.key_network_depth,
                                     "msg_net_arch": [args.msg_hidden_size] * args.msg_network_depth,
                                     "key_dim": args.key_dim,
                                     "msg_dim": args.msg_dim,
                                     "activation": args.activation,
                                 },
-                                "qf": [args.hidden_size] * args.network_depth,
+                                "qf": [args.qf_hidden_size] * args.qf_network_depth,
                             }
                         }
                     )
@@ -98,4 +87,27 @@ if __name__ == "__main__":
 
 
     args.show_gui = True
-    run(args, save_path, n_runs = 1)
+    average_total_reward, average_episode_length = run(args, save_path, n_runs = args.n_eval_runs)
+
+    print(f"Average total reward: {average_total_reward:.2f}")
+    print(f"Average episode length: {average_episode_length:.2f}")
+
+    return average_total_reward, average_episode_length
+
+
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    wandb.init(
+        project="fish-marl-cur-experiment",
+        config={"algo": "TD3"},
+        sync_tensorboard=True,   # You don't want tensorboard
+        monitor_gym=False,        # You don't want video
+        save_code=False,
+        mode="disabled" if not args.wandb else "online",
+    )
+
+    wandb.config.update(args)
+
+    train(args)
