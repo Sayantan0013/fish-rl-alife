@@ -18,6 +18,13 @@ class Controller(ABC):
             fish_observation: np.ndarray) -> (float, float, float):
         pass
 
+class StaticFishController(Controller):
+    @staticmethod
+    def get_action(**kargs) -> (float, float, float):
+        speed_change = 0.0
+        direction_change = 0.0
+        procreate = False
+        return speed_change, direction_change, procreate
 
 class RandomFishController(Controller):
     @staticmethod

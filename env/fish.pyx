@@ -6,6 +6,7 @@ from env.animal_controller import RandomFishController
 from env.animal_controller import DemoFishController
 from env.animal_controller import TurnAwayFishController
 from env.animal_controller import BoidFishController
+from env.animal_controller import StaticFishController
 from copy import deepcopy
 from abc import ABC
 
@@ -84,6 +85,13 @@ class DemoFish(ControllerFish):
 
     def name(self):
         return 'DemoFish.' + str(self._identifier)
+
+
+class StaticFish(ControllerFish):
+    CONTROLLER = StaticFishController
+
+    def name(self):
+        return 'StaticFish.' + str(self._identifier)
 
 
 class TurnAwayFish(ControllerFish):

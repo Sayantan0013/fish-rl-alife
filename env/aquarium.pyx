@@ -13,7 +13,7 @@ from env.shark import Shark
 from env.view import View
 import env.util as util
 from env.collision import CollisionSpace
-from env.fish import RandomFish, TurnAwayFish, BoidFish
+from env.fish import RandomFish, TurnAwayFish, BoidFish, StaticFish
 from env.shark import RandomShark, DefaultShark, SharkAgent
 from gymnasium import Env
 
@@ -68,7 +68,7 @@ class Aquarium(Env):
         self.next_fish_id = 0
         self.next_shark_id = 0
         self.step_penalty = -0.01
-        self.catch_reward = 20
+        self.catch_reward = 1
         self.bump_penalty = bump_penalty
 
         # Environment parameters.
@@ -197,10 +197,11 @@ class Aquarium(Env):
     def killed_sharks(self) -> int:
         return self.dead_sharks
 
-    def select_fish_types(self, random_fish=0, turn_away_fish=0, boid_fish=0):
+    def select_fish_types(self, random_fish=0, turn_away_fish=0, boid_fish=0, static_fish=0):
         self.fish_types['RandomFish'] = random_fish
         self.fish_types['TurnAwayFish'] = turn_away_fish
         self.fish_types['BoidFish'] = boid_fish
+        self.fish_types['StaticFish'] = static_fish
         return self
 
     def select_shark_types(self, shark_agents=0):
@@ -266,7 +267,8 @@ class Aquarium(Env):
         types = {
             "RandomFish": RandomFish,
             "TurnAwayFish": TurnAwayFish,
-            "BoidFish": BoidFish
+            "BoidFish": BoidFish,
+            "StaticFish": StaticFish,
         }
 
         x_pos = np.random.uniform(0, self.width)

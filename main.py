@@ -85,8 +85,6 @@ def train(args):
     else:
         save_path = check_model_path(args.load_model_path)
 
-
-    args.show_gui = True
     average_total_reward, average_episode_length = run(args, save_path, n_runs = args.n_eval_runs)
 
     print(f"Average total reward: {average_total_reward:.2f}")

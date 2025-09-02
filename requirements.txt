@@ -1,4 +1,6 @@
 # tensorflow
+# git+git://github.com/Instance-contrib/baselines@tf2-instance#egg=baselines
+pytorch
 gymnasium
 pygame
-git+git://github.com/Instance-contrib/baselines@tf2-instance#egg=baselines
+# stable-baselines3[extra]

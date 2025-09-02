@@ -27,8 +27,11 @@ class View:
     def render(self, render_mode):
         if render_mode == 'human':
             pygame.display.flip()
+            return pygame.surfarray.array3d(self.screen)
+            # pygame.display.update(pygame.Rect(0, 0, self.width // 2, self.height))
         elif render_mode == 'rgb_array':
-            pygame.display.flip()
+            # pygame.display.flip()
+            # pygame.display.update(pygame.Rect(0, 0, self.width // 2, self.height))
             return pygame.surfarray.array3d(self.screen)
         elif render_mode =='rgb_array_only':
             return pygame.surfarray.array3d(self.screen)

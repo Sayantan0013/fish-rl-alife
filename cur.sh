@@ -19,11 +19,11 @@ echo "Python version: $(python --version)"
 export PYTHONWARNINGS="ignore"
 model_path="final_destination"
 
-for cc in $(seq 3 -0.2 1); do
+for cc in $(seq 3 -0.1 1); do
     save_path="${model_path}/cc_${cc}.pth"
-    load_path="${model_path}/cc_$(echo "$cc + 0.2" | bc).pth"
+    load_path="${model_path}/cc_$(echo "$cc + 0.1" | bc).pth"
 
     echo "Running with -cc $cc, loading from $load_path and saving to $save_path"
-    python3 main.py --wandb --vector -ne 32 -t 1_000_000 -cc $cc -l "$load_path" -s "$save_path" -lr 8e-4
+    python3 main.py --wandb --vector -ne 32 -t 500_000 -cc $cc -l "$load_path" -s "$save_path" -lr 8e-4
 
 done
