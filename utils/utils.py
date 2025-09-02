@@ -16,6 +16,8 @@ def log_time(func):
 
 def check_model_path(input_string):
     # Convert the input to a Path object
+    if not input_string:
+        return False
     path = Path(input_string)
 
     # Check and modify the path components
@@ -28,6 +30,12 @@ def check_model_path(input_string):
         print('No Model found to load')
         return False
     return str(path)
+
+def companion_coeff_mapper(value):
+    # Apply your desired function to the value here
+    # For example, let's say you want to square the input value
+    transformed_value = 2 * float(value) * float(value)
+    return transformed_value
 
 def make_env_with_args(Env: Env, args):
     env = Env(
@@ -74,11 +82,13 @@ def parse_args():
     parser.add_argument('--num_envs', '-ne', type=int, default=8, help='Number of Parallel environments in gymnasium')
     parser.add_argument('--n_random_fish', '-rf', type=int, default=1, help='Number of Random Fish in the sea')
     parser.add_argument('--n_turnaway_fish','-tf',type=int, default=3, help='Number of Turnaway fish in the sea')
+    parser.add_argument('--n_static_fish', '-sf', type=int, default=0, help='Number of Static fish in the sea')
     parser.add_argument('--rnn_hidden_state_dim', type=int, default=32, help='Dimension of RNN hidden state')
-    parser.add_argument('--learning_rate', type=float, default=5e-4, help='Learning rate for the model')
-    parser.add_argument('--activation', '-a', type=str, default='relu', help='Activation function for the model')
-    parser.add_argument('--seed', type=int, default=42, help='Random seed for the model')
-    parser.add_argument('--eval_render_mode','-erm', type=str, choices=[ 'rgb_array', 'rgb_array_only'], default='rgb_array', help='Render mode for evaluation')
+    parser.add_argument('--learning_rate', '-lr', type=float, default=1e-3, help='Learning rate for the model')
+    parser.add_argument('--activation', '-a', type=str, default='tanh', choices=['relu', 'tanh', 'sigmoid', 'leaky_relu', 'elu'], help='Activation function for the model')
+    parser.add_argument('--seed', type=int, default=42, help='Random seed')
+    parser.add_argument('--eval_render_mode','-erm', type=str, choices=['human', 'rgb_array', 'rgb_array_only'], default='rgb_array', help='Render mode for evaluation')
+    parser.add_argument('--n_eval_runs', type=int, default=5, help='Number of evaluations')
 
     parser.add_argument('--torus', action='store_true', help='Enable toroidal world (wrap around edges)')
     parser.add_argument('--no_torus', dest='torus', action='store_false', help='Disable toroidal world')
@@ -87,7 +97,7 @@ def parse_args():
 
     # Co-op Params
     parser.add_argument('--bump_penalty', '-bp', type=float, default=-0.01, help='Penalty on bumping into fish on its own')
-    parser.add_argument('--companion_coeff', '-cc', type=float, default=5., help='Radius Multiplier for companionship')
+    parser.add_argument('--companion_coeff', '-cc', type=companion_coeff_mapper, default=18., help='Radius Multiplier for companionship')
 
     parser.add_argument('--train', action='store_true', help='Enable training')
     parser.add_argument('--eval', dest='train', action='store_false', help='Only Evaluation')
@@ -104,8 +114,6 @@ def parse_args():
     parser.add_argument('--lock_screen', action='store_true', help='Enable lock screen')
     parser.add_argument('--no_lock_screen', dest='lock_screen', action='store_false', help='Disable lock screen')
     parser.set_defaults(lock_screen=False)
-
-    parser.add_argument('--seed', type=int, default=42, help='Random seed')
 
     parser.add_argument('--show_gui', action='store_true', help='Show GUI')
     parser.add_argument('--no_show_gui', dest='show_gui', action='store_false', help='Hide GUI')
@@ -128,16 +136,19 @@ def parse_args():
     parser.set_defaults(stun=False)
 
     ## Netowrk Params
-    parser.add_argument('--hidden_size', type=int, default=64, help='Hidden size for the network')
-    parser.add_argument('--network_depth', type=int, default=2, help='Depth of the network')
+    parser.add_argument('--pi_hidden_size', type=int, default=64, help='Hidden size for the pi network')
+    parser.add_argument('--pi_network_depth', type=int, default=1, help='Depth of the pi network')
 
-    parser.add_argument('--key_hidden_size', type=int, default=16, help='Hidden size for the network')
-    parser.add_argument('--key_network_depth', type=int, default=1, help='Depth of the network')
+    parser.add_argument('--qf_hidden_size', type=int, default=64, help='Hidden size for the qf network')
+    parser.add_argument('--qf_network_depth', type=int, default=1, help='Depth of the qf network')
 
-    parser.add_argument('--msg_hidden_size', type=int, default=32, help='Hidden size for the network')
-    parser.add_argument('--msg_network_depth', type=int, default=1, help='Depth of the network')
+    parser.add_argument('--key_hidden_size', type=int, default=16, help='Hidden size for the key network')
+    parser.add_argument('--key_network_depth', type=int, default=3, help='Depth of the key network')
 
-    parser.add_argument('--key_dim', type=int, default=4, help='Hidden size for the network')
-    parser.add_argument('--msg_dim', type=int, default=16, help='Depth of the network')
+    parser.add_argument('--msg_hidden_size', type=int, default=16, help='Hidden size for the msg network')
+    parser.add_argument('--msg_network_depth', type=int, default=2, help='Depth of the msg network')
+
+    parser.add_argument('--key_dim', type=int, default=4, help='Key dimension')
+    parser.add_argument('--msg_dim', type=int, default=16, help='Message dimension')
 
     return parser.parse_args()
