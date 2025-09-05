@@ -1,8 +1,25 @@
-from sys import flags
-import time
-from gymnasium import Env
+from stable_baselines3 import  TD3
 from argparse import ArgumentParser
+from network import CustomTD3Policy
+from datetime import datetime
+from gymnasium import Env
 from pathlib import Path
+import zipfile
+import torch
+import shutil
+import time
+import os
+
+
+def get_dump_dir(wandb_run_id):
+    if not os.path.exists("dumps"):
+        os.makedirs("dumps")
+    if wandb_run_id:
+        dump_path = f"dumps/{wandb_run_id}.h5"
+    else:
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        dump_path = f"dumps/{timestamp}.h5"
+    return dump_path
 
 def log_time(func):
     def wrapper(*args, **kwargs):
@@ -63,6 +80,50 @@ def make_env_with_args(Env: Env, args):
     env.select_shark_types(args.max_sharks)
 
     return env
+
+def load_model_actor(env, model_path, args):
+    model = TD3(
+            policy=CustomTD3Policy,
+            env=env, verbose=0,
+            device="cuda",
+            learning_rate=args.learning_rate,
+            policy_kwargs={
+                "net_arch":
+                    {
+                        "pi": {
+                            "net_arch": [args.pi_hidden_size] * args.pi_network_depth,
+                            "key_net_arch": [args.key_hidden_size] * args.key_network_depth,
+                            "msg_net_arch": [args.msg_hidden_size] * args.msg_network_depth,
+                            "key_dim": args.key_dim,
+                            "msg_dim": args.msg_dim,
+                            "activation": args.activation,
+                        },
+                        "qf": [args.qf_hidden_size] * args.qf_network_depth,
+                    }
+                }
+            )
+
+    if os.path.exists(model_path):
+
+        extract_dir = "tmp_actor_extract"
+        os.makedirs(extract_dir, exist_ok=True)
+
+        # Extract policy.pth from the zip
+        with zipfile.ZipFile(model_path, 'r') as archive:
+            archive.extractall(extract_dir)
+
+        policy_path = os.path.join(extract_dir, "policy.pth")
+        policy_dict = torch.load(policy_path, map_location="cuda")
+
+        actor_state_dict = {k.replace("actor.", ""): v for k, v in policy_dict.items() if k.startswith("actor.")}
+        model.policy.actor.load_state_dict(actor_state_dict)
+        print('Found Model and loaded policy')
+
+        shutil.rmtree(extract_dir)
+    else:
+        print('Did not find the model Initializating random policy')
+
+    return model
 
 def parse_args():
     parser = ArgumentParser(description="Environment configuration")
@@ -135,6 +196,11 @@ def parse_args():
     parser.add_argument('--no_stun', dest='stun', action='store_false', help='Disable stun move')
     parser.set_defaults(stun=False)
 
+    parser.add_argument('--interactive', action='store_true', help='Enable interactive mode (user controlled agent)')
+    parser.add_argument('--no_interactive', dest='interactive', action='store_false', help='Disable interactive mode')
+    parser.set_defaults(interactive=False)
+
+
     ## Netowrk Params
     parser.add_argument('--pi_hidden_size', type=int, default=64, help='Hidden size for the pi network')
     parser.add_argument('--pi_network_depth', type=int, default=1, help='Depth of the pi network')
@@ -150,5 +216,6 @@ def parse_args():
 
     parser.add_argument('--key_dim', type=int, default=4, help='Key dimension')
     parser.add_argument('--msg_dim', type=int, default=16, help='Message dimension')
+
 
     return parser.parse_args()

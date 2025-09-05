@@ -1,16 +1,19 @@
-from utils.utils import make_env_with_args, parse_args
+from utils.utils import get_dump_dir, make_env_with_args, parse_args, load_model_actor
 from gymnasium.wrappers import FrameStackObservation
 from stable_baselines3 import DDPG, PPO, TD3, A2C
 from torch.utils.tensorboard import SummaryWriter
 from utils.wrappers import MultiAgentEnvWrapper
+import matplotlib.gridspec as gridspec
 from matplotlib import pyplot as plt
-from network import CustomTD3Policy
+from utils.loggers import log_step_to_hdf5
+from utils.iteractive import get_interactive_action
 from env.aquarium import Aquarium
 from argparse import Namespace
 from datetime import datetime
 from pathlib import Path
 import numpy as np
 import pygame
+import pickle
 import torch
 import time
 import os
@@ -18,30 +21,18 @@ import os
 
 def run(args: Namespace, model_path: Path, n_runs: int = 10):
     # Create timestamped log directory
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_dir = Path("insight_logs") / timestamp
-    log_dir.mkdir(parents=True, exist_ok=True)
-
     # Overrriding Show GUI
     args.show_gui = 'Laptop' in torch.cuda.get_device_name(0)
 
     env = make_env_with_args(Aquarium, args)
     env = MultiAgentEnvWrapper(env, args)
-    writer = SummaryWriter(log_dir=str(log_dir))
 
-    if os.path.exists(model_path):
-        model = TD3.load(model_path, env=env, device="cuda", custom_objects={
-            "observation_space": env.observation_space,
-            "action_space": env.action_space,
-            "policy_class": CustomTD3Policy,
-        })
-        print('Found Model')
-    else:
-        print('Did not find the model')
-        model = TD3('MlpPolicy', env=env, device='cpu')
+    model = load_model_actor(env, model_path, args)
 
     average_total_reward = []
     average_episode_length = []
+    dump_path = get_dump_dir(args.wandb_run_id)
+
 
     for run_idx in range(n_runs):
         obs, _ = env.reset()
@@ -55,25 +46,22 @@ def run(args: Namespace, model_path: Path, n_runs: int = 10):
             else:
                 action = model.action_space.sample()
 
-            obs, reward, done, trunc, _ = env.step(action)
+            new_obs, reward, done, trunc, _ = env.step(action)
 
-            # Add images with run index in tag name
-            writer.add_image(f"attention/run_{run_idx}", model.policy.actor.mu.last_attention, global_step=step, dataformats='CHW')
-            writer.add_image(f"key/run_{run_idx}", model.policy.actor.mu.last_k, global_step=step, dataformats='CHW')
-            writer.add_image(f"query/run_{run_idx}", model.policy.actor.mu.last_q, global_step=step, dataformats='CHW')
-            writer.add_image(f"message/run_{run_idx}", model.policy.actor.mu.last_v, global_step=step, dataformats='CHW')
+            time.sleep(0.002)
+            env.render(render_mode=args.eval_render_mode)
 
-            norms = np.linalg.norm(model.policy.actor.mu.last_attention, axis=1).flatten()
+            data_dict = {
+                        "attention": model.policy.actor.mu.last_attention,
+                        "key": model.policy.actor.mu.last_k,
+                        "query": model.policy.actor.mu.last_q,
+                        "value": model.policy.actor.mu.last_v,
+                        "obs": obs,
+                        "reward": reward,
+            }
 
-            # Log each norm as a scalar
-            for i in range(len(norms)):
-                writer.add_scalar(f'attention/agent_{i}', norms[i], global_step=step)
-
-
-            time.sleep(0.01)
-            if args.show_gui:
-                img = env.render(render_mode=args.eval_render_mode)
-                writer.add_image(f"game_play/run_{run_idx}", img, global_step=step, dataformats='HWC')
+            obs = new_obs
+            log_step_to_hdf5(dump_path, run_idx, step, data_dict)
 
             rewards.append(reward)
             tot_rew += reward

@@ -97,7 +97,7 @@ def train(args):
 if __name__ == "__main__":
     args = parse_args()
 
-    wandb.init(
+    wandb_run = wandb.init(
         project="fish-marl-cur-experiment",
         config={"algo": "TD3"},
         sync_tensorboard=True,   # You don't want tensorboard
@@ -105,6 +105,12 @@ if __name__ == "__main__":
         save_code=False,
         mode="disabled" if not args.wandb else "online",
     )
+
+    # Get wandb run id and add it to args if a run was started
+    if args.wandb:
+        args.wandb_run_id = wandb_run.id
+    else:
+        args.wandb_run_id = None
 
     wandb.config.update(args)
 

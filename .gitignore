@@ -19,6 +19,7 @@ build/
 models_tars/
 models/
 runs_tars/
+dumps/
 
 *.aux
 *.bbl
