@@ -68,7 +68,7 @@ class Aquarium(Env):
         self.next_fish_id = 0
         self.next_shark_id = 0
         self.step_penalty = -0.01
-        self.catch_reward = 1
+        self.catch_reward = 10
         self.bump_penalty = bump_penalty
 
         # Environment parameters.
