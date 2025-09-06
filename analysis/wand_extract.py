@@ -1,5 +1,5 @@
 import wandb
-from datetime import datetime, timezone
+from datetime import datetime
 
 # Connect to wandb API
 api = wandb.Api()

@@ -1,5 +1,6 @@
 import h5py
 import torch
+import numpy as np
 
 def log_step_to_hdf5(file_path, run_idx, step, data_dict):
     """

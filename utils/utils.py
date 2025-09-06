@@ -37,11 +37,14 @@ def check_model_path(input_string):
         return False
     path = Path(input_string)
 
+
     # Check and modify the path components
     if path.parts[0] != 'models':
         path = Path('models') / path
-    if path.suffix != '.zip':
-        path = path.with_suffix('.zip')
+        if path.suffix != '.zip':
+            path = path.parent / (path.name + '.zip')
+
+    print(path)
 
     if not path.exists():
         print('No Model found to load')
@@ -103,8 +106,9 @@ def load_model_actor(env, model_path, args):
                 }
             )
 
-    if os.path.exists(model_path):
+    print(model_path)
 
+    if os.path.exists(model_path):
         extract_dir = "tmp_actor_extract"
         os.makedirs(extract_dir, exist_ok=True)
 
