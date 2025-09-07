@@ -4,13 +4,14 @@ from gymnasium.core import Wrapper
 from itertools import cycle
 import numpy as np
 
+OBSERVER_DATA_SIZE = 2
 
 
 class EnvWrapper(Wrapper):
     def __init__(self, env):
         self.env = env
         self.env.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,))
-        self.n = 2 + self.env.observable_sharks * 3 +\
+        self.n = OBSERVER_DATA_SIZE + args.observe_time + self.env.observable_sharks * 3 +\
             self.env.observable_fishes * 3 +\
             self.env.observable_walls * 2
         self.env.observation_space = spaces.Box(
@@ -47,7 +48,7 @@ class MultiAgentEnvWrapper(Wrapper):
         self.env = env
         self.num_sharks = len(list(env.sharks))
         self.env.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.env.max_sharks,2))
-        self.n = 2 + self.env.observable_sharks * (3 if args.angle else 5) +\
+        self.n = OBSERVER_DATA_SIZE + args.observe_time + self.env.observable_sharks * (3 if args.angle else 5) +\
             self.env.observable_fishes * (3 if args.angle else 5) +\
             self.env.observable_walls * 2
         self.env.observation_space = spaces.Box(
@@ -135,7 +136,7 @@ class MultiAgentEnvAECWrapper(Wrapper):
         self._agents = None
         self.selected_agent = None
         self.env.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,))
-        self.n = 2 + self.env.observable_sharks * 3 +\
+        self.n = OBSERVER_DATA_SIZE + self.env.observable_sharks * 3 +\
             self.env.observable_fishes * 3 +\
             self.env.observable_walls * 2
         self.env.observation_space = spaces.Box(

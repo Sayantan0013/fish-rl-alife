@@ -54,7 +54,8 @@ class Aquarium(Env):
         companion_coeff = 5.,
         bump_penalty = -0.01,
         direction_with_angle = True,
-        coop = True
+        coop = True,
+        observe_time = False,
     ):
         # if seed is None or seed == 'none':
         #     seed = int(1000000000 * np.random.random())
@@ -167,6 +168,7 @@ class Aquarium(Env):
         self.kill_zone_radius = kill_zone_radius
         self.simple_kill_zone_reward = simple_kill_zone_reward
         self.coop = coop
+        self.observe_time = observe_time
 
         # GUI
         self.show_gui = show_gui
@@ -296,8 +298,11 @@ class Aquarium(Env):
         return types[s_type](self.next_shark_id, position, orientation)
 
     def prepare_observation_for_controller(self, observation, is_shark = True):
+
         w1 = 2
-        w2 = 2 + (self.observations_per_wall * self.observable_walls if is_shark else DEFAULT_FISH_OBSERVATIONS)
+        if self.observe_time:
+            w1 += 1
+        w2 = w1 + (self.observations_per_wall * self.observable_walls if is_shark else DEFAULT_FISH_OBSERVATIONS)
         s2 = w2 + (self.observations_per_animal * self.observable_sharks if is_shark else DEFAULT_FISH_OBSERVATIONS)
         return {
             "own_orientation": observation[0],
@@ -318,7 +323,6 @@ class Aquarium(Env):
 
         # Update environment metrics.
         self.current_step += 1
-        self.step_count += 1
 
         self.move_fishes()
         self.move_sharks(joint_shark_action)
@@ -707,6 +711,18 @@ class Aquarium(Env):
         )
         observer_read_to_procreate = observer.is_ready_to_procreate()
         observer_data = [observer_orientation, observer_read_to_procreate]
+
+        if self.observe_time:
+            normalized_time = util.scale(
+                self.step_count,
+                0,
+                self.max_steps,
+                OBSERVATION_MIN,
+                OBSERVATION_MAX
+            )
+
+            observer_data.append(normalized_time)
+
         if self.stun_extend_obs:
             observer_data.append(int(observer.stun_steps != 0))
 

@@ -34,9 +34,9 @@ def load_yaml_from_wandb_run(project_name, run_id, file_name = 'config.yaml'):
 
     return yaml_dict
 
-# Example usage:
-config_dict = load_yaml_from_wandb_run(
-    project_name="fish-rl-sweep",
-    run_id="8rk2bpq5",
-)
-print(config_dict)
+if __name__ == "__main__":
+    # Example usage:
+    config_dict = load_yaml_from_wandb_run(
+        project_name="fish-marl-cur-experiment",
+        run_id="2m5mtesa",
+    )

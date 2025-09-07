@@ -77,6 +77,7 @@ def make_env_with_args(Env: Env, args):
         direction_with_angle = args.angle,
         coop=args.coop,
         allow_stun_move = args.stun,
+        observe_time = args.observe_time,
     )
 
     env.select_fish_types(args.n_random_fish, args.n_turnaway_fish,0)
@@ -144,13 +145,13 @@ def parse_args():
     parser.add_argument('--models_dir','-d', type=str, default=None, help='Model saving base dicrectory')
     parser.add_argument('--total_timesteps','-t', type=int, default=200_000, help='Total number of training timesteps')
     parser.add_argument('--stack_size', type=int, default=1, help='Stack size for frame stacking')
-    parser.add_argument('--num_envs', '-ne', type=int, default=8, help='Number of Parallel environments in gymnasium')
+    parser.add_argument('--num_envs', '-ne', type=int, default=16, help='Number of Parallel environments in gymnasium')
     parser.add_argument('--n_random_fish', '-rf', type=int, default=1, help='Number of Random Fish in the sea')
     parser.add_argument('--n_turnaway_fish','-tf',type=int, default=3, help='Number of Turnaway fish in the sea')
     parser.add_argument('--n_static_fish', '-sf', type=int, default=0, help='Number of Static fish in the sea')
     parser.add_argument('--rnn_hidden_state_dim', type=int, default=32, help='Dimension of RNN hidden state')
     parser.add_argument('--learning_rate', '-lr', type=float, default=5e-4, help='Learning rate for the model')
-    parser.add_argument('--activation', '-a', type=str, default='relu', help='Activation function for the model')
+    parser.add_argument('--activation', '-a', type=str, default='tanh', help='Activation function for the model')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for the model')
     parser.add_argument('--eval_render_mode','-erm', type=str, choices=['human', 'rgb_array', 'rgb_array_only'], default='rgb_array', help='Render mode for evaluation')
     parser.add_argument('--n_eval_runs', type=int, default=5, help='Number of evaluation runs')
@@ -162,7 +163,7 @@ def parse_args():
 
     # Co-op Params
     parser.add_argument('--bump_penalty', '-bp', type=float, default=-0.01, help='Penalty on bumping into fish on its own')
-    parser.add_argument('--companion_coeff', '-cc', type=companion_coeff_mapper, default=18., help='Radius Multiplier for companionship')
+    parser.add_argument('--companion_coeff', '-cc', type=companion_coeff_mapper, default=15., help='Radius Multiplier for companionship')
 
     parser.add_argument('--train', action='store_true', help='Enable training')
     parser.add_argument('--eval', dest='train', action='store_false', help='Only Evaluation')
@@ -199,6 +200,10 @@ def parse_args():
     parser.add_argument('--stun', action='store_true', help='Enable stun move')
     parser.add_argument('--no_stun', dest='stun', action='store_false', help='Disable stun move')
     parser.set_defaults(stun=False)
+
+    parser.add_argument('--observe_time', action='store_true', help='Enable time observation')
+    parser.add_argument('--no_observe_time', dest='observe_time', action='store_false', help='Disable time observation')
+    parser.set_defaults(observe_time=False)
 
     parser.add_argument('--interactive', action='store_true', help='Enable interactive mode (user controlled agent)')
     parser.add_argument('--no_interactive', dest='interactive', action='store_false', help='Disable interactive mode')
