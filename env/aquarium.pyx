@@ -56,6 +56,7 @@ class Aquarium(Env):
         direction_with_angle = True,
         coop = True,
         observe_time = False,
+        observe_position = False
     ):
         # if seed is None or seed == 'none':
         #     seed = int(1000000000 * np.random.random())
@@ -169,6 +170,7 @@ class Aquarium(Env):
         self.simple_kill_zone_reward = simple_kill_zone_reward
         self.coop = coop
         self.observe_time = observe_time
+        self.observe_position = observe_position
 
         # GUI
         self.show_gui = show_gui
@@ -302,6 +304,8 @@ class Aquarium(Env):
         w1 = 2
         if self.observe_time:
             w1 += 1
+        if self.observe_position:
+            w1 += 2
         w2 = w1 + (self.observations_per_wall * self.observable_walls if is_shark else DEFAULT_FISH_OBSERVATIONS)
         s2 = w2 + (self.observations_per_animal * self.observable_sharks if is_shark else DEFAULT_FISH_OBSERVATIONS)
         return {
@@ -722,6 +726,22 @@ class Aquarium(Env):
             )
 
             observer_data.append(normalized_time)
+
+        if self.observe_position:
+            if self.torus:
+                dx, dy = util.vector_in_torus_space(
+                    observer.position,
+                    0 * observer.position,
+                    self.width,
+                    self.height
+                )
+            else:
+                dx, dy = observer.position
+
+            distance, direction = util.cartesian_to_polar(dx, dy)
+
+            observer_data.append(np.sin(direction))
+            observer_data.append(np.cos(direction))
 
         if self.stun_extend_obs:
             observer_data.append(int(observer.stun_steps != 0))

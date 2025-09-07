@@ -78,6 +78,7 @@ def make_env_with_args(Env: Env, args):
         coop=args.coop,
         allow_stun_move = args.stun,
         observe_time = args.observe_time,
+        observe_position = args.observe_position,
     )
 
     env.select_fish_types(args.n_random_fish, args.n_turnaway_fish,0)
@@ -204,6 +205,10 @@ def parse_args():
     parser.add_argument('--observe_time', action='store_true', help='Enable time observation')
     parser.add_argument('--no_observe_time', dest='observe_time', action='store_false', help='Disable time observation')
     parser.set_defaults(observe_time=False)
+
+    parser.add_argument('--observe_position', action='store_true', help='Enable position observation')
+    parser.add_argument('--no_observe_position', dest='observe_position', action='store_false', help='Disable position observation')
+    parser.set_defaults(observe_position=False)
 
     parser.add_argument('--interactive', action='store_true', help='Enable interactive mode (user controlled agent)')
     parser.add_argument('--no_interactive', dest='interactive', action='store_false', help='Disable interactive mode')
