@@ -306,6 +306,8 @@ class Aquarium(Env):
             w1 += 1
         if self.observe_position:
             w1 += 2
+        if self.stun_extend_obs:
+            w1 += 1
         w2 = w1 + (self.observations_per_wall * self.observable_walls if is_shark else DEFAULT_FISH_OBSERVATIONS)
         s2 = w2 + (self.observations_per_animal * self.observable_sharks if is_shark else DEFAULT_FISH_OBSERVATIONS)
         return {
