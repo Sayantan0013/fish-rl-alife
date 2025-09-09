@@ -7,6 +7,7 @@ from stable_baselines3.common.logger import configure
 from gymnasium.wrappers import FrameStackObservation
 from stable_baselines3 import DDPG, PPO, TD3, A2C
 from utils.wrappers import MultiAgentEnvWrapper
+from analysis.load_from_wandb import load_yaml_from_wandb_run
 from wandb.integration.sb3 import WandbCallback
 # from utils.callbacks import WandbCallback
 from network import CustomTD3Policy
@@ -55,7 +56,6 @@ def train(args):
                     tensorboard_log=log_dir,
                     device="cuda",
                     learning_rate=args.learning_rate,
-                    tau=0.01,
                     policy_kwargs={
                         "net_arch":
                             {
@@ -80,7 +80,9 @@ def train(args):
         #     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         #     save_path = 'models/TD3_model_' + now + '.zip'
 
-        save_path =  Path(f'models/{args.save_model_path}').with_suffix('.zip')
+        save_path =  Path(f'models/{args.save_model_path}')
+        if save_path.suffix != '.zip':
+            save_path = save_path.parent / (save_path.name + '.zip')
         model.save(save_path)
     else:
         save_path = check_model_path(args.load_model_path)
@@ -98,7 +100,7 @@ if __name__ == "__main__":
     args = parse_args()
 
     wandb_run = wandb.init(
-        project="fish-marl-cur-experiment",
+        project="fishing-time",
         config={"algo": "TD3"},
         sync_tensorboard=True,   # You don't want tensorboard
         monitor_gym=False,        # You don't want video
@@ -112,6 +114,19 @@ if __name__ == "__main__":
     else:
         args.wandb_run_id = None
 
-    wandb.config.update(args)
+
+    # config_dict = load_yaml_from_wandb_run(
+    #     project_name="fish-marl-cur-experiment",
+    #     run_id="2m5mtesa",
+    # )
+
+    # # Update args with values from config_dict
+    # for key, value in config_dict.items():
+    #     if hasattr(args, key) and key not in ['train','total_timesteps', 'save_model_path', 'load_model_path', 'eval_render_mode','n_eval_runs']:
+    #         if(getattr(args, key) != value['value']):
+    #             print(f"Updating {key} from {getattr(args, key)} to {value['value']}")
+    #         setattr(args, key, value['value'])
+
+    wandb_run.config.update(args)
 
     train(args)

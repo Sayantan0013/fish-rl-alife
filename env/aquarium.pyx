@@ -720,7 +720,7 @@ class Aquarium(Env):
 
         if self.observe_time:
             normalized_time = util.scale(
-                self.step_count,
+                self.current_step,
                 0,
                 self.max_steps,
                 OBSERVATION_MIN,

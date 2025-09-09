@@ -209,7 +209,7 @@ def play(args: Namespace, model_path: str, n_runs: int = 1):
             time.sleep(0.005)
             if args.show_gui:
                 img = env.render(render_mode=args.eval_render_mode)
-                writer.add_image(f"game_play/run_{run_idx}", img, global_step=step, dataformats='HWC')
+                # writer.add_image(f"game_play/run_{run_idx}", img, global_step=step, dataformats='HWC')
 
             rewards.append(reward)
             tot_rew += reward

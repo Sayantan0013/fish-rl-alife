@@ -44,7 +44,6 @@ def check_model_path(input_string):
         if path.suffix != '.zip':
             path = path.parent / (path.name + '.zip')
 
-    print(path)
 
     if not path.exists():
         print('No Model found to load')
@@ -134,6 +133,7 @@ def load_model_actor(env, model_path, args):
 def parse_args():
     parser = ArgumentParser(description="Environment configuration")
 
+    parser.add_argument('--project', '-p', type=str, default='fish-rl', help='Name of the project')
     parser.add_argument('--observable_sharks', type=int, default=0, help='Number of observable sharks')
     parser.add_argument('--observable_fishes', type=int, default=2, help='Number of observable fishes')
     parser.add_argument('--observable_walls', type=int, default=0, help='Number of observable walls')
@@ -147,8 +147,8 @@ def parse_args():
     parser.add_argument('--total_timesteps','-t', type=int, default=200_000, help='Total number of training timesteps')
     parser.add_argument('--stack_size', type=int, default=1, help='Stack size for frame stacking')
     parser.add_argument('--num_envs', '-ne', type=int, default=16, help='Number of Parallel environments in gymnasium')
-    parser.add_argument('--n_random_fish', '-rf', type=int, default=1, help='Number of Random Fish in the sea')
-    parser.add_argument('--n_turnaway_fish','-tf',type=int, default=3, help='Number of Turnaway fish in the sea')
+    parser.add_argument('--n_random_fish', '-rf', type=int, default=2, help='Number of Random Fish in the sea')
+    parser.add_argument('--n_turnaway_fish','-tf',type=int, default=2, help='Number of Turnaway fish in the sea')
     parser.add_argument('--n_static_fish', '-sf', type=int, default=0, help='Number of Static fish in the sea')
     parser.add_argument('--rnn_hidden_state_dim', type=int, default=32, help='Dimension of RNN hidden state')
     parser.add_argument('--learning_rate', '-lr', type=float, default=5e-4, help='Learning rate for the model')
@@ -172,7 +172,7 @@ def parse_args():
 
     parser.add_argument('--angle', action='store_true', help='Use Angle in the agent obvservation')
     parser.add_argument('--vector', dest='angle', action='store_false', help='Use sin cos vector as agent observation')
-    parser.set_defaults(angle=True)
+    parser.set_defaults(angle=False)
 
     parser.add_argument('--fish_collision', action='store_true', help='Enable fish collision')
     parser.add_argument('--no_fish_collision', dest='fish_collision', action='store_false', help='Disable fish collision')

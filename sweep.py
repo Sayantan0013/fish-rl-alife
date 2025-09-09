@@ -22,6 +22,7 @@ def set_seed(seed: int = 42):
 def train_one_run(config: Dict[str, Any] = None):
     with wandb.init(config=config):
         cfg = wandb.config
+        cfg['wandb_run_id']= wandb.run.id
 
         set_seed(cfg['seed'])
         average_total_reward, average_episode_length = train(Namespace(**cfg))
@@ -74,7 +75,7 @@ def sweep_config(project: str):
             },
             # === Fixed RL Defaults ===
             "seed": {"value": 42},
-            "total_timesteps": {"value": 5_00_000},
+            "total_timesteps": {"value": 500_000},
             "stack_size": {"value": 1},
             "num_envs": {"value": 16},
             "rnn_hidden_state_dim": {"value": 32},
@@ -102,7 +103,7 @@ def sweep_config(project: str):
             "lock_screen": {"value": False},
             "show_gui": {"value": False},
             "use_global_reward": {"value": True},
-            "coop": {"value": True},
+            "coop": {"value": False},
             "stun": {"value": False},
             "wandb": {"value": True},  # Enable logging
 
